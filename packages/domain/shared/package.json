@@ -1,6 +1,6 @@
 {
   "name": "@tailwind-styled/shared",
-  "version": "5.0.4",
+  "version": "0.2.0",
   "description": "Shared utilities and types for tailwind-styled-v4",
   "license": "MIT",
   "type": "commonjs",

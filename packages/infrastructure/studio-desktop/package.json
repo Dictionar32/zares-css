@@ -1,6 +1,6 @@
 {
   "name": "@tailwind-styled/studio-desktop",
-  "version": "5.0.4",
+  "version": "0.2.0",
   "description": "tailwind-styled Studio — Desktop app (Electron)",
   "private": true,
   "author": "Dictionar32",
@@ -101,9 +101,9 @@
     }
   },
   "dependencies": {
-    "@tailwind-styled/engine": "^5.0.4",
-    "@tailwind-styled/scanner": "^5.0.4",
-    "@tailwind-styled/shared": "^5.0.4",
+    "@tailwind-styled/engine": "^0.2.0",
+    "@tailwind-styled/scanner": "^0.2.0",
+    "@tailwind-styled/shared": "^0.2.0",
     "electron-updater": "^6.0.0",
     "inversify": "^8.1.0",
     "reflect-metadata": "^0.2.2",

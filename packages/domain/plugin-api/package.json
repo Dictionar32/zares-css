@@ -1,6 +1,6 @@
 {
   "name": "@tailwind-styled/plugin-api",
-  "version": "5.0.4",
+  "version": "0.2.0",
   "description": "Internal plugin contracts and registry runtime for tailwind-styled-v4",
   "license": "MIT",
   "type": "module",
@@ -30,7 +30,7 @@
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "@tailwind-styled/shared": "^5.0.4",
+    "@tailwind-styled/shared": "^0.2.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

@@ -1,7 +1,7 @@
 {
   "name": "@tailwind-styled/next",
-  "version": "5.0.4",
-  "description": "Next.js integration for tailwind-styled-v4 \u2014 withTailwindStyled, webpack/turbopack loaders",
+  "version": "0.2.0",
+  "description": "Next.js integration for tailwind-styled-v4 — withTailwindStyled, webpack/turbopack loaders",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -33,11 +33,11 @@
     "test:watch": "node --test --watch tests/*.test.mjs"
   },
   "dependencies": {
-    "@tailwind-styled/compiler": "^5.0.4",
-    "@tailwind-styled/engine": "^5.0.4",
-    "@tailwind-styled/plugin": "^5.0.4",
-    "@tailwind-styled/scanner": "^5.0.4",
-    "@tailwind-styled/shared": "^5.0.4",
+    "@tailwind-styled/compiler": "^0.2.0",
+    "@tailwind-styled/engine": "^0.2.0",
+    "@tailwind-styled/plugin": "^0.2.0",
+    "@tailwind-styled/scanner": "^0.2.0",
+    "@tailwind-styled/shared": "^0.2.0",
     "inversify": "^8.1.0",
     "reflect-metadata": "^0.2.2",
     "zod": "^4.3.6"

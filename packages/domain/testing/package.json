@@ -1,6 +1,6 @@
 {
   "name": "@tailwind-styled/testing",
-  "version": "5.0.4",
+  "version": "0.2.0",
   "description": "Testing matchers and helpers for tailwind-styled",
   "license": "MIT",
   "type": "module",

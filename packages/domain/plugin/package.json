@@ -1,6 +1,6 @@
 {
   "name": "@tailwind-styled/plugin",
-  "version": "5.0.4",
+  "version": "0.2.0",
   "description": "Plugin system for tailwind-styled-v5 — extend compiler pipeline at any stage",
   "license": "MIT",
   "type": "module",
@@ -41,7 +41,7 @@
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "@tailwind-styled/plugin-api": "^5.0.4",
+    "@tailwind-styled/plugin-api": "^0.2.0",
     "inversify": "^8.1.0",
     "reflect-metadata": "^0.2.2",
     "zod": "^4.3.6"

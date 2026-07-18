@@ -165,7 +165,7 @@ const sharedConfig = {
   // footer bukan banner — supaya tidak push "use client" ke baris ke-2.
   // preserveDirectives() akan inject directive di baris 1 via onSuccess.
   footer: {
-    js: "/* tailwind-styled-v4 v5.1.9 | MIT | https://github.com/dictionar32/tailwind-styled-v4 */",
+    js: "/* tailwind-styled-v4 v0.2.0 | MIT | https://github.com/dictionar32/tailwind-styled-v4 */",
   },
   esbuildOptions(options: import("esbuild").BuildOptions, _context: { format: string }) {
     // The compiler package's native-bridge chunk is split out as a shared

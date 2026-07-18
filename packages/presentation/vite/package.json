@@ -1,6 +1,6 @@
 {
   "name": "@tailwind-styled/vite",
-  "version": "5.0.4",
+  "version": "0.2.0",
   "description": "PRO Engine: styled-components + Tailwind CSS v4, zero-runtime compile, variant system, responsive props, plugin ecosystem",
   "author": "Dictionar32",
   "license": "MIT",
@@ -64,9 +64,9 @@
     "test:watch": "node --test --watch tests/*.test.mjs"
   },
   "dependencies": {
-    "@tailwind-styled/compiler": "^5.0.4",
-    "@tailwind-styled/engine": "^5.0.4",
-    "@tailwind-styled/scanner": "^5.0.4",
+    "@tailwind-styled/compiler": "^0.2.0",
+    "@tailwind-styled/engine": "^0.2.0",
+    "@tailwind-styled/scanner": "^0.2.0",
     "inversify": "^8.1.0",
     "reflect-metadata": "^0.2.2",
     "zod": "^4.3.6"

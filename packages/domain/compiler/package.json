@@ -1,6 +1,6 @@
 {
   "name": "@tailwind-styled/compiler",
-  "version": "5.0.14",
+  "version": "0.2.0",
   "description": "Compiler pipeline for tailwind-styled-v4",
   "license": "MIT",
   "type": "module",
@@ -59,9 +59,9 @@
     "README.md"
   ],
   "dependencies": {
-    "@tailwind-styled/plugin-api": "^5.0.4",
-    "@tailwind-styled/shared": "^5.0.4",
-    "@tailwind-styled/syntax": "^5.0.4",
+    "@tailwind-styled/plugin-api": "^0.2.0",
+    "@tailwind-styled/shared": "^0.2.0",
+    "@tailwind-styled/syntax": "^0.2.0",
     "inversify": "^8.1.0",
     "postcss": "^8",
     "reflect-metadata": "^0.2.2",

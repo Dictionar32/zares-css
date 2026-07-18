@@ -1,6 +1,6 @@
 {
   "name": "@tailwind-styled/syntax",
-  "version": "5.0.4",
+  "version": "0.2.0",
   "description": "Internal syntax extraction helpers for tailwind-styled-v4",
   "license": "MIT",
   "type": "module",

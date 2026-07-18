@@ -1,6 +1,6 @@
 {
   "name": "@tailwind-styled/analyzer",
-  "version": "5.0.4",
+  "version": "0.2.0",
   "description": "Project-aware analyzer for tailwind-styled-v4",
   "license": "MIT",
   "type": "module",
@@ -23,8 +23,8 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@tailwind-styled/scanner": "^5.0.4",
-    "@tailwind-styled/shared": "^5.0.4",
+    "@tailwind-styled/scanner": "^0.2.0",
+    "@tailwind-styled/shared": "^0.2.0",
     "inversify": "^8.1.0",
     "reflect-metadata": "^0.2.2",
     "zod": "^4.3.6"

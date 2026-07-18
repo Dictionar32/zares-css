@@ -1,6 +1,6 @@
 {
   "name": "tailwind-styled-vscode",
-  "version": "5.0.4",
+  "version": "0.2.0",
   "displayName": "Tailwind Styled VS Code",
   "description": "VS Code extension for Tailwind Styled - trace, doctor, and why commands",
   "publisher": "tailwind-styled",
@@ -66,7 +66,7 @@
     "check": "tsc --noEmit",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "pack:check": "node ../../scripts/check-pack-artifacts.mjs packages/infrastructure/vscode",
-    "test": "echo \"No tests yet \u2014 add test files to enable\""
+    "test": "echo \"No tests yet — add test files to enable\""
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -75,7 +75,7 @@
     "typescript": "^6"
   },
   "dependencies": {
-    "@tailwind-styled/engine": "^5.0.4",
+    "@tailwind-styled/engine": "^0.2.0",
     "inversify": "^8.1.0",
     "reflect-metadata": "^0.2.2",
     "zod": "^4.3.6"

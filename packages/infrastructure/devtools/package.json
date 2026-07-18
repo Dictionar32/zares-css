@@ -1,7 +1,7 @@
 {
   "name": "@tailwind-styled/devtools",
-  "version": "5.0.4",
-  "description": "Visual debug overlay for tailwind-styled-v4 \u2014 zero production impact",
+  "version": "0.2.0",
+  "description": "Visual debug overlay for tailwind-styled-v4 — zero production impact",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -39,9 +39,9 @@
     "typescript": "^6"
   },
   "dependencies": {
-    "@tailwind-styled/analyzer": "^5.0.4",
-    "@tailwind-styled/scanner": "^5.0.4",
-    "@tailwind-styled/shared": "^5.0.4",
+    "@tailwind-styled/analyzer": "^0.2.0",
+    "@tailwind-styled/scanner": "^0.2.0",
+    "@tailwind-styled/shared": "^0.2.0",
     "inversify": "^8.1.0",
     "reflect-metadata": "^0.2.2",
     "zod": "^4.3.6"

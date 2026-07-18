@@ -1,6 +1,6 @@
 {
   "name": "@tailwind-styled/preset",
-  "version": "5.0.4",
+  "version": "0.2.0",
   "description": "Default Tailwind preset for tailwind-styled-v5 — v5 with Tailwind v4 CSS-first support",
   "license": "MIT",
   "type": "module",
