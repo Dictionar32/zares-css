@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "rootDir": "src",
+    "allowJs": true,
+    "checkJs": false,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": true,
+    "ignoreDeprecations": "6.0",
+    "skipLibCheck": true,
+    "target": "ES2020"
+  },
+  "include": ["src/**/*.js"],
+  "exclude": ["dist-electron", "node_modules"]
+}

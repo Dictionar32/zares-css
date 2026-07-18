@@ -1,0 +1,101 @@
+/**
+ * tailwind-styled-v4 — Atomic CSS
+ *
+ * JS layer: thin wrapper, re-export types, expose registry diagnostics.
+ * Rust layer: parseAtomicClass, generateAtomicCss, toAtomicClasses, registry.
+ *
+ * Removed from JS: TW_PROPERTY_MAP, sizeValue, textSize, fontWeight,
+ * leadingValue, roundedValue, sanitizeClassName, REGISTRY Map.
+ */
+
+import { getNativeBridge } from "@tailwind-styled/compiler"
+
+export interface AtomicRule {
+  twClass: string
+  atomicName: string
+  property: string
+  value: string
+  modifier?: string
+}
+
+type AtomicNativeBridge = Required<Pick<ReturnType<typeof getNativeBridge>,
+  "parseAtomicClass" | "generateAtomicCss" | "toAtomicClasses" | "clearAtomicRegistry" | "atomicRegistrySize"
+>>
+
+function getNative(): AtomicNativeBridge {
+  const native = getNativeBridge()
+  if (
+    !native?.parseAtomicClass ||
+    !native?.generateAtomicCss ||
+    !native?.toAtomicClasses
+  ) {
+    throw new Error(
+      "FATAL: Native bindings 'parseAtomicClass', 'generateAtomicCss', 'toAtomicClasses' are required.\n" +
+      "Build the native Rust module: npm run build:rust"
+    )
+  }
+  return native as AtomicNativeBridge
+}
+
+/**
+ * Parse a single Tailwind class into an AtomicRule.
+ * Returns null if the class prefix is not in the atomic property map.
+ *
+ * Rust: parse_atomic_class(tw_class: String) -> Option<String>
+ */
+const _parseAtomicCache = new Map<string, AtomicRule>()
+
+export function parseAtomicClass(twClass: string): AtomicRule | null {
+  const cached = _parseAtomicCache.get(twClass)
+  if (cached !== undefined) return cached
+  const native = getNative()
+  const json = native.parseAtomicClass(twClass)
+  if (!json) return null
+  const result = JSON.parse(json) as AtomicRule
+  _parseAtomicCache.set(twClass, result)
+  return result
+}
+
+/**
+ * Generate CSS string from an array of AtomicRules.
+ *
+ * Rust: generate_atomic_css(rules_json: String) -> String
+ */
+export function generateAtomicCss(rules: AtomicRule[]): string {
+  const native = getNative()
+  return native.generateAtomicCss(JSON.stringify(rules))
+}
+
+/**
+ * Convert a space-separated Tailwind class string to atomic equivalents.
+ *
+ * Rust: to_atomic_classes(tw_classes: String) -> String (JSON)
+ */
+export function toAtomicClasses(twClasses: string): {
+  atomicClasses: string
+  rules: AtomicRule[]
+  unknownClasses: string[]
+} {
+  const native = getNative()
+  return JSON.parse(native.toAtomicClasses(twClasses)) as {
+    atomicClasses: string
+    rules: AtomicRule[]
+    unknownClasses: string[]
+  }
+}
+
+export function getAtomicRegistry(): { size: number } {
+  const native = getNativeBridge()
+  if (!native?.atomicRegistrySize) {
+    throw new Error("FATAL: Native binding 'atomicRegistrySize' is required but not available.")
+  }
+  return { size: native.atomicRegistrySize() }
+}
+
+export function clearAtomicRegistry(): void {
+  const native = getNativeBridge()
+  if (!native?.clearAtomicRegistry) {
+    throw new Error("FATAL: Native binding 'clearAtomicRegistry' is required but not available.")
+  }
+  native.clearAtomicRegistry()
+}

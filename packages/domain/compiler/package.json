@@ -1,0 +1,93 @@
+{
+  "name": "@tailwind-styled/compiler",
+  "version": "5.0.14",
+  "description": "Compiler pipeline for tailwind-styled-v4",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "./dist/chunk-*.js"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./compiler": {
+      "types": "./dist/compiler/index.d.ts",
+      "import": "./dist/compiler/index.js",
+      "default": "./dist/compiler/index.js"
+    },
+    "./parser": {
+      "types": "./dist/parser/index.d.ts",
+      "import": "./dist/parser/index.js",
+      "default": "./dist/parser/index.js"
+    },
+    "./analyzer": {
+      "types": "./dist/analyzer/index.d.ts",
+      "import": "./dist/analyzer/index.js",
+      "default": "./dist/analyzer/index.js"
+    },
+    "./cache": {
+      "types": "./dist/cache/index.d.ts",
+      "import": "./dist/cache/index.js",
+      "default": "./dist/cache/index.js"
+    },
+    "./redis": {
+      "types": "./dist/redis/index.d.ts",
+      "import": "./dist/redis/index.js",
+      "default": "./dist/redis/index.js"
+    },
+    "./watch": {
+      "types": "./dist/watch/index.d.ts",
+      "import": "./dist/watch/index.js",
+      "default": "./dist/watch/index.js"
+    },
+    "./internal": {
+      "types": "./dist/internal.d.ts",
+      "import": "./dist/internal.js",
+      "default": "./dist/internal.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@tailwind-styled/plugin-api": "^5.0.4",
+    "@tailwind-styled/shared": "^5.0.4",
+    "@tailwind-styled/syntax": "^5.0.4",
+    "inversify": "^8.1.0",
+    "postcss": "^8",
+    "reflect-metadata": "^0.2.2",
+    "zod": "^4.3.6"
+  },
+  "optionalDependencies": {
+    "oxc-parser": "^0.120.0"
+  },
+  "peerDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "tailwindcss": "^4"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "tsup": "^8",
+    "typescript": "^6"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup src/index.ts src/internal.ts --format esm --dts --out-dir dist --watch",
+    "check": "tsc --noEmit",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "pack:check": "node ../../scripts/check-pack-artifacts.mjs packages/domain/compiler",
+    "test": "node --test tests/*.test.mjs",
+    "test:watch": "node --test --watch tests/*.test.mjs"
+  },
+  "main": "./dist/index.cjs"
+}

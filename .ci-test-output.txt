@@ -1,0 +1,15 @@
+
+> tailwind-styled-v4@5.1.20 build:rust
+> cd native && napi build --release --platform && cp tailwind-styled-native.$(node -e "const p=process.platform+'-'+process.arch; console.log(p==='linux-x64'?'linux-x64-gnu':p==='linux-arm64'?'linux-arm64-gnu':p)").node tailwind-styled-native.node
+
+[1m[33mwarning[0m[1m: function `conflict_group` is never used[0m
+  [1m[94m--> [0msrc/application/tw_merge.rs:42:4
+   [1m[94m|[0m
+[1m[94m42[0m [1m[94m|[0m fn conflict_group(base: &str) -> Option<String> {
+   [1m[94m|[0m    [1m[33m^^^^^^^^^^^^^^[0m
+   [1m[94m|[0m
+   [1m[94m= [0m[1mnote[0m: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+[1m[33mwarning[0m: `tailwind_styled_parser` (lib) generated 1 warning
+[1m[92m    Finished[0m `release` profile [optimized] target(s) in 0.21s
+BUILD_RUST:0

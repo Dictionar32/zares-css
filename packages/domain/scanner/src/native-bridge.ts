@@ -1,0 +1,617 @@
+/**
+ * Scanner — Rust native bridge
+ *
+ * Wraps the Rust scan_workspace and extract_classes_from_source functions.
+ * Uses @tailwind-styled/shared for native binding resolution.
+ */
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+import {
+  createDebugLogger,
+  loadNativeBinding,
+  resolveNativeBindingCandidates,
+  TwError,
+} from "@tailwind-styled/shared"
+
+const log = createDebugLogger("scanner:native")
+
+// ESM-compatible __dirname equivalent
+function getDirname(): string {
+  if (typeof __dirname !== "undefined") {
+    return __dirname
+  }
+  if (typeof import.meta !== "undefined" && import.meta.url) {
+    return path.dirname(fileURLToPath(import.meta.url))
+  }
+  return process.cwd()
+}
+
+interface NativeScannerBinding {
+  scanWorkspace?: (
+    root: string,
+    extensions: string[] | null
+  ) => {
+    files: Array<{ file: string; classes: string[]; hash: string }>
+    totalFiles: number
+    uniqueClasses: string[] | null
+  } | null
+  extractClassesFromSource?: (source: string) => string[] | null
+  hashFileContent?: (content: string) => string | null
+  cacheRead?: (cachePath: string) => {
+    entries: Array<{
+      file: string
+      classes: string[]
+      hash: string
+      mtimeMs: number
+      size: number
+      hitCount: number
+      lastSeenMs?: number
+    }>
+    version: number
+  } | null
+  cacheWrite?: (
+    cachePath: string,
+    entries: Array<{
+      file: string
+      classes: string[]
+      hash: string
+      mtimeMs: number
+      size: number
+      hitCount: number
+      lastSeenMs?: number
+    }>
+  ) => boolean
+  cachePriority?: (
+    mtimeMs: number,
+    size: number,
+    cachedMtimeMs: number,
+    cachedSize: number,
+    cachedHitCount: number,
+    cachedLastSeenMs: number,
+    nowMs: number
+  ) => number
+  batchExtractClasses?: (filePaths: string[]) => Array<{
+    file: string
+    classes: string[]
+    content_hash: string
+    ok: boolean
+    error?: string | null
+  }>
+  scanCacheGet?: (filePath: string, contentHash: string) => string[] | null
+  scanCachePut?: (filePath: string, contentHash: string, classes: string[], mtimeMs: number, size: number) => void
+  scanCacheInvalidate?: (filePath: string) => void
+  scanCacheStats?: () => { size: number }
+  scanFile?: (filePath: string) => {
+    file: string
+    classes: string[]
+    hash: string
+    ok: boolean
+    error?: string | null
+  }
+  collectFiles?: (root: string, extensions: string[] | null, ignoreDirs: string[] | null) => string[]
+  scanFilesBatch?: (filePaths: string[]) => Array<{
+    file: string
+    classes: string[]
+    hash: string
+  }>
+  generateSubComponentTypes?: (
+    root: string,
+    outputPath: string | null
+  ) => {
+    components: Array<{ name: string; classes: string[] }>
+    outputPath: string | null
+    totalFiles: number
+  }
+  /** Batch-check file existence + stale age. Menggantikan pruneStaleEntries() */
+  pruneStaleEntries?: (
+    entries: Array<{ file: string; lastSeenMs: number }>,
+    maxAgeMs: number | null,
+    checkExists: boolean | null
+  ) => { keptIndices: number[]; removed: number }
+  /** Hitung class frequency stats dari disk cache. Menggantikan computeCacheStats() */
+  computeCacheStats?: (
+    filesClasses: string[][],
+    sizes: number[],
+    top: number | null
+  ) => {
+    totalEntries: number
+    totalClasses: number
+    totalSizeBytes: number
+    avgClassesPerEntryX100: number
+    mostUsedClasses: Array<{ class: string; count: number }>
+  }
+   /** Rebuild workspace result — Rust HashSet dedup + sort. Menggantikan JS fallback di mergeResults() */
+   rebuildWorkspaceResult?: (
+     files: Array<{ file: string; classes: readonly string[] }>
+   ) => { files: Array<{ file: string; classes: string[] }>; totalFiles: number; uniqueClasses: string[] }
+
+  // ── Watch API (QA #12) ──────────────────────────────────────────────────
+  /** Mulai native file watcher via `notify` crate. Returns handleId. */
+  startWatch?: (rootDir: string) => { status: string; handleId: number }
+  /** Poll events yang terkumpul sejak poll terakhir. Queue dikosongkan setelah dipoll. */
+  pollWatchEvents?: (handleId: number) => Array<{ kind: string; path: string }>
+  /** Hentikan watcher dengan handleId. */
+  stopWatch?: (handleId: number) => boolean
+}
+
+const isValidScannerBinding = (module: unknown): module is NativeScannerBinding => {
+  const candidate = module as Partial<NativeScannerBinding> | null | undefined
+  return !!(
+    candidate &&
+    (candidate.scanWorkspace ||
+      candidate.extractClassesFromSource ||
+      candidate.hashFileContent ||
+      candidate.cacheRead ||
+      candidate.cacheWrite)
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Native Bridge - Factory Pattern
+// ─────────────────────────────────────────────────────────────────────────
+
+const createScannerBridgeLoader = () => {
+  const _state = {
+    binding: undefined as NativeScannerBinding | null | undefined,
+    loadError: null as string | null,
+    candidatePaths: [] as string[],
+    loadedPath: null as string | null,
+  }
+
+  const throwNativeBindingError = (): never => {
+    const lines = [
+      "FATAL: Native scanner binding not found.",
+      "",
+      "This package requires the Rust native binding 'tailwind_styled_parser.node'.",
+      "The binding was not found in any of these paths:",
+      ..._state.candidatePaths.map((p) => `  - ${p}`),
+      "",
+    ]
+
+    if (_state.loadError) {
+      lines.push("Load error:", `  ${_state.loadError}`, "")
+    }
+
+    lines.push(
+      "To fix this, run:",
+      "  npm run build:rust",
+      "",
+      "This will build the native Rust module from the 'native/' directory.",
+      "If you're using this package in a CI/CD environment, ensure Rust toolchain is installed",
+      "and 'npm run build:rust' is executed before running tests or building."
+    )
+
+    throw new TwError("rust", "SCANNER_NATIVE_BINDING_NOT_FOUND", lines.join("\n"))
+  }
+
+  const scannerGetBinding = (): NativeScannerBinding => {
+    const cachedBinding = _state.binding
+    if (cachedBinding !== undefined) {
+      if (cachedBinding !== null) {
+        return cachedBinding
+      }
+      return throwNativeBindingError()
+    }
+
+    const runtimeDir = getDirname()
+    const candidates = resolveNativeBindingCandidates({
+      runtimeDir,
+      includeDefaultCandidates: true,
+    })
+
+    _state.candidatePaths = candidates
+
+    const { binding, loadedPath, loadErrors } = loadNativeBinding<NativeScannerBinding>({
+      runtimeDir,
+      candidates,
+      isValid: isValidScannerBinding,
+      invalidExportMessage: "Module loaded but missing expected scanner binding functions",
+    })
+
+    if (binding) {
+      log(`scanner native binding loaded successfully`)
+      _state.binding = binding
+      _state.loadedPath = loadedPath ?? null
+      return _state.binding
+    }
+
+    if (loadErrors.length > 0) {
+      _state.loadError = loadErrors.map((e) => `${e.path}: ${e.message}`).join("; ")
+    }
+
+    _state.binding = null
+    return throwNativeBindingError()
+  }
+
+  return {
+    get: scannerGetBinding,
+    scannerGetBinding,
+    getLoadedPath: (): string | null => _state.loadedPath,
+    reset: (): void => {
+      _state.binding = undefined
+      _state.loadError = null
+      _state.candidatePaths = []
+      _state.loadedPath = null
+    },
+  }
+}
+
+const scannerBridgeLoader = createScannerBridgeLoader()
+const scannerGetBinding = scannerBridgeLoader.get
+
+export const resetScannerBridgeCache = scannerBridgeLoader.reset
+
+/**
+ * Path .node binary native yang lagi dipakai sekarang (kalau ada).
+ * Dipakai buat fingerprint cache invalidation — lihat cache-native.ts.
+ * Memanggil scannerGetBinding() dulu supaya binding ke-load (loadedPath
+ * cuma keisi setelah binding berhasil di-resolve sekali).
+ */
+export function getLoadedScannerBindingPath(): string | null {
+  try {
+    scannerGetBinding()
+  } catch {
+    // Binding gagal load — loadedPath tetap null, biar caller decide fallback-nya
+  }
+  return scannerBridgeLoader.getLoadedPath()
+}
+
+export function scanWorkspaceNative(
+  root: string,
+  extensions?: string[]
+): ReturnType<NonNullable<NativeScannerBinding["scanWorkspace"]>> {
+  return scannerGetBinding().scanWorkspace!(root, extensions ?? null)
+}
+
+export function extractClassesNative(source: string): string[] {
+  const result = scannerGetBinding().extractClassesFromSource?.(source)
+  if (result === null || result === undefined) {
+    throw new TwError(
+      "rust",
+      "SCANNER_EXTRACT_FAILED",
+      "Native extractClassesFromSource returned null/undefined"
+    )
+  }
+  return result
+}
+
+export function hashContentNative(content: string): string {
+  const result = scannerGetBinding().hashFileContent?.(content)
+  if (result === null || result === undefined) {
+    throw new TwError(
+      "rust",
+      "SCANNER_HASH_FAILED",
+      "Native hashFileContent returned null/undefined"
+    )
+  }
+  return result
+}
+
+export function isRustCacheAvailable(): boolean {
+  return true
+}
+
+export function hasNativeScannerBinding(): boolean {
+  try {
+    scannerBridgeLoader.get()
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function cacheReadNative(
+  cachePath: string
+): ReturnType<NonNullable<NativeScannerBinding["cacheRead"]>> {
+  const result = scannerGetBinding().cacheRead?.(cachePath)
+  if (result === null || result === undefined) {
+    throw new TwError(
+      "rust",
+      "SCANNER_CACHE_READ_FAILED",
+      "Native cacheRead returned null/undefined"
+    )
+  }
+  return result
+}
+
+export function cacheWriteNative(
+  cachePath: string,
+  entries: Parameters<NonNullable<NativeScannerBinding["cacheWrite"]>>[1]
+): boolean {
+  const result = scannerGetBinding().cacheWrite?.(cachePath, entries)
+  if (result === null || result === undefined) {
+    throw new TwError(
+      "rust",
+      "SCANNER_CACHE_WRITE_FAILED",
+      "Native cacheWrite returned null/undefined"
+    )
+  }
+  return result
+}
+
+export function cachePriorityNative(
+  mtimeMs: number,
+  size: number,
+  cachedMtimeMs: number,
+  cachedSize: number,
+  cachedHitCount: number,
+  cachedLastSeenMs: number,
+  nowMs = Date.now()
+): number {
+  const result = scannerGetBinding().cachePriority?.(
+    mtimeMs,
+    size,
+    cachedMtimeMs,
+    cachedSize,
+    cachedHitCount,
+    cachedLastSeenMs,
+    nowMs
+  )
+  if (result === null || result === undefined) {
+    throw new TwError(
+      "rust",
+      "SCANNER_CACHE_PRIORITY_FAILED",
+      "Native cachePriority returned null/undefined"
+    )
+  }
+  return result
+}
+
+export function batchExtractClassesNative(filePaths: string[]): Array<{
+  file: string
+  classes: string[]
+  content_hash: string
+  ok: boolean
+  error?: string | null
+}> {
+  const binding = scannerGetBinding()
+  if (!binding.batchExtractClasses) {
+    throw new Error("FATAL: Native binding 'batchExtractClasses' is required but not available.")
+  }
+  return binding.batchExtractClasses(filePaths) ?? []
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// In-memory scan cache (Rust DashMap — zero disk I/O)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function scanCacheGet(filePath: string, contentHash: string): string[] | null {
+  const binding = scannerGetBinding()
+  if (!binding.scanCacheGet) {
+    throw new Error("FATAL: Native binding 'scanCacheGet' is required but not available.")
+  }
+  return binding.scanCacheGet(filePath, contentHash) ?? null
+}
+
+export function scanCachePut(
+  filePath: string,
+  contentHash: string,
+  classes: string[],
+  mtimeMs: number,
+  size: number
+): void {
+  const binding = scannerGetBinding()
+  if (!binding.scanCachePut) {
+    throw new Error("FATAL: Native binding 'scanCachePut' is required but not available.")
+  }
+  binding.scanCachePut(filePath, contentHash, classes, mtimeMs, size)
+}
+
+export function scanCacheInvalidate(filePath: string): void {
+  const binding = scannerGetBinding()
+  if (!binding.scanCacheInvalidate) {
+    throw new Error("FATAL: Native binding 'scanCacheInvalidate' is required but not available.")
+  }
+  binding.scanCacheInvalidate(filePath)
+}
+
+export function scanCacheStats(): { size: number } {
+  const binding = scannerGetBinding()
+  if (!binding.scanCacheStats) {
+    throw new Error("FATAL: Native binding 'scanCacheStats' is required but not available.")
+  }
+  return binding.scanCacheStats() as { size: number }
+}
+export function scanFileNative(filePath: string): {
+  file: string
+  classes: string[]
+  hash: string
+  ok: boolean
+  error?: string | null
+} {
+  const binding = scannerGetBinding()
+  if (!binding.scanFile) {
+    throw new Error("FATAL: Native binding 'scanFile' is required but not available.")
+  }
+  return binding.scanFile(filePath)
+}
+/**
+ * Native file walker — kumpulkan file paths rekursif tanpa baca konten.
+ *
+ * Menggantikan `collectFiles()` di `parallel-scanner.ts`.
+ * Returns null jika binding tidak tersedia (fallback ke JS).
+ */
+export function collectFilesNative(
+  root: string,
+  extensions: string[] | null,
+  ignoreDirs: string[] | null
+): string[] | null {
+  const binding = scannerGetBinding()
+  if (!binding.collectFiles) return null
+  return binding.collectFiles(root, extensions, ignoreDirs)
+}
+/**
+ * Batch scan + hash banyak file sekaligus dalam satu NAPI call.
+ *
+ * Menggantikan loop `scanFileNative()` per file di worker thread.
+ * Rust: `par_iter()` via rayon — semua file diproses paralel di thread pool Rust,
+ * tanpa overhead spawn JS worker untuk setiap chunk.
+ *
+ * Kapan pakai ini vs `batchExtractClassesNative`:
+ * - `scanFilesBatch`       → butuh {file, classes, hash} — scan + hash sekaligus
+ * - `batchExtractClasses`  → hanya butuh {file, classes, content_hash, ok, error}
+ *
+ * Returns: array dengan panjang sama dengan input. File yang gagal dibaca
+ * dikembalikan dengan classes:[] dan hash:"".
+ */
+export function scanFilesBatchNative(filePaths: string[]): Array<{
+  file: string
+  classes: string[]
+  hash: string
+}> {
+  const binding = scannerGetBinding()
+  if (!binding.scanFilesBatch) {
+    // Fallback: panggil scanFile satu per satu
+    return filePaths.map((fp) => {
+      try {
+        const r = binding.scanFile?.(fp)
+        return r
+          ? { file: r.file, classes: r.classes, hash: r.hash ?? "" }
+          : { file: fp, classes: [], hash: "" }
+      } catch {
+        return { file: fp, classes: [], hash: "" }
+      }
+    })
+  }
+  return binding.scanFilesBatch(filePaths)
+}
+ 
+/**
+ * Scan workspace rekursif dan generate TypeScript type declarations
+ * untuk setiap sub-component yang ditemukan.
+ *
+ * Menggantikan operasi scan manual + string codegen di JS.
+ * Rust: walkdir + regex class extraction + type codegen dalam satu pass.
+ *
+ * @param root       Direktori root workspace
+ * @param outputPath Path output file .d.ts (opsional — kalau null, hanya return result)
+ */
+export function generateSubComponentTypesNative(
+  root: string,
+  outputPath?: string
+): {
+  components: Array<{ name: string; classes: string[] }>
+  outputPath: string | null
+  totalFiles: number
+} | null {
+  const binding = scannerGetBinding()
+  if (!binding.generateSubComponentTypes) return null
+  return binding.generateSubComponentTypes(root, outputPath ?? null) as {
+    components: Array<{ name: string; classes: string[] }>
+    outputPath: string | null
+    totalFiles: number
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+// pruneStaleEntries + computeCacheStats — native wrappers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Batch-check file existence + stale age menggunakan Rust syscalls.
+ * Returns `null` jika native tidak tersedia (JS fallback di caller).
+ *
+ * Menggantikan loop `existsSync()` di `pruneStaleEntries()` (cache-native.ts).
+ */
+export function pruneStaleEntriesNative(
+  entries: Array<{ file: string; lastSeenMs?: number }>,
+  maxAgeMs?: number,
+  checkExists?: boolean
+): { keptIndices: number[]; removed: number } | null {
+  const binding = scannerGetBinding()
+  if (!binding.pruneStaleEntries) return null
+  return binding.pruneStaleEntries(
+    entries.map((e) => ({ file: e.file, lastSeenMs: e.lastSeenMs ?? 0 })),
+    maxAgeMs ?? null,
+    checkExists ?? null
+  )
+}
+
+/**
+ * Hitung class frequency + stats dari disk cache entries menggunakan Rust.
+ * Returns `null` jika native tidak tersedia (JS fallback di caller).
+ *
+ * Menggantikan `computeCacheStats()` di `cache-native.ts`.
+ */
+export function rebuildWorkspaceResultNative(
+  files: Array<{ file: string; classes: readonly string[] }>
+): { files: typeof files; totalFiles: number; uniqueClasses: string[] } | null {
+  const binding = scannerBridgeLoader.get()
+  if (!binding?.rebuildWorkspaceResult) return null
+  try {
+    return binding.rebuildWorkspaceResult(files)
+  } catch {
+    return null
+  }
+}
+
+export function computeCacheStatsNative(
+  filesClasses: string[][],
+  sizes: number[],
+  top?: number
+): {
+  totalEntries: number
+  totalClasses: number
+  totalSizeBytes: number
+  avgClassesPerEntryX100: number
+  mostUsedClasses: Array<{ class: string; count: number }>
+} | null {
+  const binding = scannerGetBinding()
+  if (!binding.computeCacheStats) return null
+  return binding.computeCacheStats(filesClasses, sizes, top ?? null)
+}
+// ─────────────────────────────────────────────────────────────────────────────
+// Watch API — native wrappers (QA #12)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Mulai native file watcher menggunakan `notify` crate (Rust).
+ * Returns `null` jika binding tidak tersedia — fallback ke fs.watch JS.
+ */
+export function startWatchNative(rootDir: string): { status: string; handleId: number } | null {
+  try {
+    const binding = scannerGetBinding()
+    if (!binding.startWatch) return null
+    return binding.startWatch(rootDir)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Poll events dari native watcher queue. Queue dikosongkan setelah dipoll.
+ * Returns array kosong jika tidak ada events atau binding tidak tersedia.
+ */
+export function pollWatchEventsNative(handleId: number): Array<{ kind: string; path: string }> {
+  try {
+    const binding = scannerGetBinding()
+    if (!binding.pollWatchEvents) return []
+    return binding.pollWatchEvents(handleId)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Hentikan native watcher dengan handleId.
+ */
+export function stopWatchNative(handleId: number): boolean {
+  try {
+    const binding = scannerGetBinding()
+    if (!binding.stopWatch) return false
+    return binding.stopWatch(handleId)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Cek apakah native watch API tersedia.
+ */
+export function hasNativeWatchBinding(): boolean {
+  try {
+    const binding = scannerGetBinding()
+    return !!(binding.startWatch && binding.pollWatchEvents && binding.stopWatch)
+  } catch {
+    return false
+  }
+}

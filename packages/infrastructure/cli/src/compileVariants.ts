@@ -1,0 +1,346 @@
+/**
+ * tw compile-variants
+ *
+ * Scan semua cv() calls di source, pre-compute semua kombinasi variant
+ * menggunakan Rust, output static lookup table ke file generated.
+ *
+ * Flow:
+ *   source .tsx/.ts
+ *     → AST scan (cari cv({...}) calls)
+ *     → compile_variant_table (Rust — cartesian product)
+ *     → variants.generated.ts (static lookup table)
+ *
+ * cv() runtime kemudian import dari generated file: O(1) lookup, zero Rust di browser.
+ */
+
+import fs from "node:fs"
+import path from "node:path"
+import { createCliOutput } from "./utils/output"
+import { createCliLogger } from "./utils/logger"
+import { getNativeBridge } from "@tailwind-styled/compiler/internal"
+import pc from "picocolors"
+
+async function* globFiles(
+  cwd: string,
+  exts: string[],
+  ignore: string[]
+): AsyncIterable<string> {
+  function walk(dir: string): string[] {
+    const results: string[] = []
+    let entries: fs.Dirent[]
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }) } catch { return results }
+    for (const e of entries) {
+      const fullPath = path.join(dir, e.name)
+      const rel = path.relative(cwd, fullPath)
+      if (ignore.some((i) => rel.includes(i) || e.name.includes(i))) continue
+      if (e.isDirectory()) results.push(...walk(fullPath))
+      else if (exts.some((x) => e.name.endsWith(x))) results.push(fullPath)
+    }
+    return results
+  }
+  for (const f of walk(cwd)) yield f
+}
+
+/** Recursive file walker — replaces glob dependency */
+function walkFiles(dir: string, exts: string[], ignore: string[]): string[] {
+  const results: string[] = []
+  const entries = fs.readdirSync(dir, { withFileTypes: true })
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name)
+    if (ignore.some((i) => entry.name.includes(i))) continue
+    if (entry.isDirectory()) {
+      results.push(...walkFiles(fullPath, exts, ignore))
+    } else if (exts.some((ext) => entry.name.endsWith(ext))) {
+      results.push(fullPath)
+    }
+  }
+  return results
+}
+
+interface CvConfig {
+  componentId: string
+  base: string
+  variants: Record<string, Record<string, string>>
+  defaultVariants?: Record<string, string>
+  compoundVariants?: Array<Record<string, string>>
+}
+
+interface VariantTableResult {
+  id: string
+  tableJson: string
+  keys: string[]
+  defaultKey: string
+  combinations: number
+}
+
+// Regex: tangkap cv({ ... }) dari source — simple heuristic, bukan full AST
+// Full AST parsing ada di Rust (ast_extract_classes), tapi untuk extract cv config
+// kita pakai pattern matching yang cukup untuk 95% kasus
+const CV_PATTERN = /(?:export\s+)?(?:const|let)\s+(\w+)\s*=\s*cv\s*\(\s*(\{[\s\S]*?\})\s*\)/g
+
+function extractCvConfigs(source: string, filepath: string): CvConfig[] {
+  const configs: CvConfig[] = []
+  let match: RegExpExecArray | null
+
+  CV_PATTERN.lastIndex = 0
+  while ((match = CV_PATTERN.exec(source)) !== null) {
+    const componentName = match[1]
+    const configStr = match[2]
+
+    try {
+      // Safe eval dalam sandbox terbatas — hanya untuk literal objects
+      // eslint-disable-next-line no-new-func
+      const config = new Function(`return (${configStr})`)() as CvConfig
+      configs.push({
+        componentId: `${path.basename(filepath, path.extname(filepath))}_${componentName}`,
+        base: config.base ?? "",
+        variants: config.variants ?? {},
+        defaultVariants: config.defaultVariants,
+        compoundVariants: config.compoundVariants,
+      })
+    } catch {
+      // Skip jika config tidak bisa di-parse (dynamic values, dll)
+      // Gunakan TWS_DEBUG=1 atau DEBUG=tw:compile-variants untuk melihat detail
+      if (process.env.TWS_DEBUG === "1" || process.env.DEBUG?.includes("tw:compile-variants")) {
+        process.stderr.write(`[tw:compile-variants] skip non-literal cv() in ${filepath}\n`)
+      }
+    }
+  }
+
+  return configs
+}
+
+function generateLookupKey(keys: string[], values: string[]): string {
+  return keys.map((k, i) => `${k}:${values[i]}`).join("|")
+}
+
+function compileVariantTableJS(config: CvConfig): VariantTableResult {
+  const keys = Object.keys(config.variants).sort()
+  const valueSets = keys.map((k) => Object.keys(config.variants[k]))
+
+  // Cartesian product
+  const combinations: string[][] = valueSets.reduce<string[][]>(
+    (acc, values) => acc.flatMap((combo) => values.map((v) => [...combo, v])),
+    [[]]
+  )
+
+  const table: Record<string, string> = {}
+  let defaultKey = ""
+
+  for (const combo of combinations) {
+    const classes: string[] = []
+
+    if (config.base) classes.push(...config.base.split(" ").filter(Boolean))
+
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]
+      const value = combo[i]
+      const variantClass = config.variants[key]?.[value]
+      if (variantClass) classes.push(...variantClass.split(" ").filter(Boolean))
+    }
+
+    // Compound variants
+    if (config.compoundVariants) {
+      for (const compound of config.compoundVariants) {
+        const { class: cls, ...conditions } = compound
+        const matches = Object.entries(conditions).every(
+          ([k, v]) => combo[keys.indexOf(k)] === v
+        )
+        if (matches && cls) classes.push(...cls.split(" ").filter(Boolean))
+      }
+    }
+
+    // Deduplicate
+    const unique = [...new Set(classes)]
+    const lookupKey = generateLookupKey(keys, combo)
+    table[lookupKey] = unique.join(" ")
+
+    // Mark default combo
+    if (config.defaultVariants) {
+      const isDefault = keys.every(
+        (k, i) => combo[i] === (config.defaultVariants?.[k] ?? Object.keys(config.variants[k])[0])
+      )
+      if (isDefault) defaultKey = lookupKey
+    }
+  }
+
+  return {
+    id: config.componentId,
+    tableJson: JSON.stringify(table),
+    keys,
+    defaultKey,
+    combinations: combinations.length,
+  }
+}
+
+function generateTypeScriptOutput(
+  configs: CvConfig[],
+  tables: VariantTableResult[]
+): string {
+  const lines: string[] = [
+    "/**",
+    " * AUTO-GENERATED — DO NOT EDIT",
+    " * Generated by: npx tw compile-variants",
+    " * Variant lookup tables pre-computed at build-time.",
+    " * Runtime cv() uses this for O(1) class resolution.",
+    " */",
+    "",
+    "export type VariantLookupTable = Record<string, string>",
+    "",
+  ]
+
+  for (let i = 0; i < configs.length; i++) {
+    const config = configs[i]
+    const table = tables[i]
+    const table_data = JSON.parse(table.tableJson) as Record<string, string>
+
+    lines.push(`// ${config.componentId} — ${table.combinations} combinations`)
+    lines.push(`export const ${config.componentId}_variants: VariantLookupTable = {`)
+    for (const [key, value] of Object.entries(table_data)) {
+      lines.push(`  "${key}": "${value}",`)
+    }
+    lines.push("}")
+    lines.push("")
+  }
+
+  // Export registry
+  lines.push("export const __variantRegistry: Record<string, VariantLookupTable> = {")
+  for (const config of configs) {
+    lines.push(`  "${config.componentId}": ${config.componentId}_variants,`)
+  }
+  lines.push("}")
+  lines.push("")
+
+  // Helper function untuk cv() runtime lookup
+  lines.push("export function lookupVariant(")
+  lines.push("  componentId: string,")
+  lines.push("  props: Record<string, string>,")
+  lines.push("  defaultVariants?: Record<string, string>")
+  lines.push("): string | undefined {")
+  lines.push("  const table = __variantRegistry[componentId]")
+  lines.push("  if (!table) return undefined")
+  lines.push("  const merged = { ...defaultVariants, ...props }")
+  lines.push("  const key = Object.keys(merged).sort().map(k => `${k}:${merged[k]}`).join('|')")
+  lines.push("  return table[key]")
+  lines.push("}")
+  lines.push("")
+
+  return lines.join("\n")
+}
+
+export async function runCompileVariantsCli(rawArgs: string[]): Promise<void> {
+  const output = createCliOutput({
+    json: rawArgs.includes("--json"),
+  })
+  const logger = createCliLogger({ output })
+
+  const cwd = process.cwd()
+  const outFile = rawArgs.find((a) => a.startsWith("--out="))?.slice(6)
+    ?? "src/generated/variants.generated.ts"
+  const outPath = path.resolve(cwd, outFile)
+
+  output.writeText("")
+  output.writeText(pc.bold(pc.cyan("  ◆ tw compile-variants")))
+  output.writeText(pc.dim("  ─────────────────────────────────────"))
+  output.writeText("")
+
+  // Scan source files
+  const spinner = output.spinner()
+  spinner.start("Scanning source files...")
+
+  const extensions = [".tsx", ".ts", ".jsx", ".js"]
+  const ignores = ["node_modules", ".next", "dist", "out", ".turbo", "*.generated.*"]
+  const allConfigs: CvConfig[] = []
+  let fileCount = 0
+
+  try {
+    for await (const fullPath of globFiles(cwd, extensions, ignores)) {
+      try {
+        const source = fs.readFileSync(fullPath, "utf-8")
+        if (!source.includes("cv(")) continue
+
+        const configs = extractCvConfigs(source, fullPath)
+        if (configs.length > 0) {
+          allConfigs.push(...configs)
+          fileCount++
+        }
+      } catch (readErr) {
+        // Skip unreadable files — biasanya binary atau permission denied
+        if (process.env.TWS_DEBUG === "1") {
+          const msg = readErr instanceof Error ? readErr.message : String(readErr)
+          process.stderr.write(`[tw:compile-variants] skip unreadable: ${fullPath} — ${msg}\n`)
+        }
+      }
+    }
+  } catch (walkErr) {
+    // Walk error — directory mungkin dihapus saat scan
+    if (process.env.TWS_DEBUG === "1") {
+      const msg = walkErr instanceof Error ? walkErr.message : String(walkErr)
+      process.stderr.write(`[tw:compile-variants] walk error: ${msg}\n`)
+    }
+  }
+
+  spinner.stop(`Scanned — ${fileCount} files dengan cv()`)
+
+  if (allConfigs.length === 0) {
+    logger.warn("Tidak ada cv() config ditemukan")
+    output.writeText("")
+    return
+  }
+
+  output.writeText(`    ${pc.dim("ditemukan")}  ${pc.cyan(String(allConfigs.length))} komponen`)
+  output.writeText("")
+
+  // Compile variant tables
+  output.writeText(pc.bold("  [1/2]") + pc.cyan("  compile variant tables"))
+  const tables: VariantTableResult[] = []
+  let totalCombinations = 0
+
+  for (const config of allConfigs) {
+    let table: VariantTableResult
+
+    // ── Native path: Rust cartesian product (10–100x faster for large configs)
+    try {
+      const native = getNativeBridge()
+      if (native.compileVariantTable && typeof native.compileVariantTable === 'function') {
+        const result = native.compileVariantTable(JSON.stringify(config))
+        table = {
+          id: result.id,
+          tableJson: result.tableJson,
+          keys: result.keys,
+          defaultKey: result.defaultKey,
+          combinations: result.combinations,
+        }
+      } else {
+        // ── JS fallback
+        table = compileVariantTableJS(config)
+      }
+    } catch {
+      // ── JS fallback if native unavailable
+      table = compileVariantTableJS(config)
+    }
+
+    tables.push(table)
+    totalCombinations += table.combinations
+    logger.ok(`${config.componentId} — ${table.combinations} kombinasi`)
+  }
+
+  output.writeText("")
+  output.writeText(pc.bold("  [2/2]") + pc.cyan("  generate output"))
+
+  // Generate output file
+  const outDir = path.dirname(outPath)
+  if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true })
+
+  const tsOutput = generateTypeScriptOutput(allConfigs, tables)
+  fs.writeFileSync(outPath, tsOutput, "utf-8")
+  logger.ok(`${path.relative(cwd, outPath)} (${totalCombinations} total kombinasi)`)
+
+  output.writeText("")
+  output.writeText(pc.dim("  ─────────────────────────────────────"))
+  output.writeText(pc.bold(pc.green("  ✓ selesai")))
+  output.writeText("")
+  output.writeText(pc.dim("  selanjutnya — import di cv() runtime:"))
+  output.writeText("    " + pc.cyan(`import { lookupVariant } from "./${path.relative(path.dirname(outPath), outPath).replace(/\\/g, "/")}.generated"`))
+  output.writeText("")
+}

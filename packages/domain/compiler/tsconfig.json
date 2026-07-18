@@ -1,0 +1,28 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "dist",
+    "declarationDir": "dist",
+    "types": ["node"],
+    "paths": {
+      "@tailwind-styled/shared": [
+        "../shared/dist/index.d.ts"
+      ],
+      "@tailwind-styled/plugin-api": [
+        "../plugin-api/dist/index.d.ts"
+      ],
+      "@tailwind-styled/syntax": [
+        "../syntax/dist/index.d.ts"
+      ]
+    }
+  },
+  "include": ["src"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/__tests__/**"
+  ]
+}
