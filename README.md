@@ -1,26 +1,26 @@
 <div align="center">
 
-# zares
+# zares-css
 
 ### ⚡ Zero-runtime Atomic Rust CSS Engine (Static)
 **Build-time compiler · Zero runtime overhead · Type-safe variants · RSC-ready**
 
-[![npm](https://img.shields.io/npm/v/zares?color=blue)](https://npmjs.com/package/zares)
-[![license](https://img.shields.io/npm/l/zares)](LICENSE)
+[![npm](https://img.shields.io/npm/v/zares-css?color=blue)](https://npmjs.com/package/zares-css)
+[![license](https://img.shields.io/npm/l/zares-css)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-1.75+-orange?logo=rust)](https://rust-lang.org)
 [![Node](https://img.shields.io/badge/Node.js-20+-green?logo=node.js)](https://nodejs.org)
 [![tests](https://img.shields.io/badge/tests-545%2B%20passing-brightgreen)](#)
-[![bundle](https://img.shields.io/badge/runtime-~4.5kb-green)](https://bundlephobia.com/package/zares)
+[![bundle](https://img.shields.io/badge/runtime-~4.5kb-green)](https://bundlephobia.com/package/zares-css)
 
 </div>
 
 ---
 
-`zares` adalah library styling React yang menggabungkan **DX styled-components** dengan **performa Tailwind CSS v4** — dikompilasi oleh engine Rust. Tulis komponen sekali dengan `tw.button({ variants })`, Rust extract dan optimasi seluruh CSS di build time.
+`zares-css` adalah library styling React yang menggabungkan **DX styled-components** dengan **performa Tailwind CSS v4** — dikompilasi oleh engine Rust. Tulis komponen sekali dengan `tw.button({ variants })`, Rust extract dan optimasi seluruh CSS di build time.
 
 **Perbandingan:**
 
-| | zares | styled-components | Tailwind biasa | Panda CSS |
+| | zares-css | styled-components | Tailwind biasa | Panda CSS |
 |---|---|---|---|---|
 | Build-time CSS | ✅ | ❌ runtime inject | ✅ | ✅ |
 | Runtime JS | ~0 | ~15KB | ~0 | ~0 |
@@ -36,7 +36,7 @@
 ## Instalasi
 
 ```bash
-npm install zares
+npm install zares-css
 npx tw setup
 ```
 
@@ -51,7 +51,7 @@ npx tw setup
 API paling sederhana — satu tag, satu string kelas.
 
 ```tsx
-import { tw } from "zares"
+import { tw } from "zares-css"
 
 const Button = tw.button`
   inline-flex items-center rounded-lg px-4 py-2
@@ -140,7 +140,7 @@ Tag prefix di-strip otomatis dari TypeScript inference — `Card.title` bukan `C
 Untuk styling non-komponen (className string) — berguna di utility functions, dynamic class lists, dll.
 
 ```tsx
-import { cv } from "zares"
+import { cv } from "zares-css"
 
 const badge = cv({
   base: "inline-flex items-center gap-1.5 rounded-full font-medium",
@@ -275,7 +275,7 @@ Breakpoint default: `xs=240px`, `sm=320px`, `md=640px`, `lg=1024px`, `xl=1280px`
 Komponen yang di-enforce hanya boleh render di server. Dev warning otomatis jika render di browser.
 
 ```tsx
-import { server } from "zares"
+import { server } from "zares-css"
 
 // Sama persis API-nya dengan tw — tapi compiler enforce server-only
 const PageHeader = server.header({
@@ -306,7 +306,7 @@ const AvatarRoot = server.div({
 Untuk design system dengan token terpusat. Token di-inject sebagai CSS custom properties `--sys-{group}-{name}`.
 
 ```tsx
-import { createStyledSystem } from "zares"
+import { createStyledSystem } from "zares-css"
 
 const ui = createStyledSystem({
   tokens: {
@@ -358,7 +358,7 @@ ui.setTokens({ colors: { primary: "#8b5cf6" } })
 Token yang bisa diupdate runtime dan subscribe ke perubahannya.
 
 ```tsx
-import { liveToken, tokenVar, createUseTokens } from "zares"
+import { liveToken, tokenVar, createUseTokens } from "zares-css"
 
 // Deklarasi token
 const tokens = liveToken({
@@ -395,7 +395,7 @@ tokens.primary.set("#8b5cf6")
 Utility untuk merge dan deduplicate Tailwind classes.
 
 ```tsx
-import { cn, cx, twMerge } from "zares"
+import { cn, cx, twMerge } from "zares-css"
 
 // cn — merge dengan dedup (alias twMerge)
 cn("px-4 py-2", isActive && "bg-blue-500", className)
@@ -415,7 +415,7 @@ twMerge("px-4 px-8")  // → "px-8" (konflik di-resolve, yang terakhir menang)
 
 **`next.config.ts`:**
 ```ts
-import { withTailwindStyled } from "zares/next"
+import { withTailwindStyled } from "zares-css/next"
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {}
@@ -429,7 +429,7 @@ export default withTailwindStyled({
 
 **`layout.tsx`:**
 ```tsx
-import { TwCssInjector } from "zares/runtime-css"
+import { TwCssInjector } from "zares-css/runtime-css"
 
 export default function RootLayout({ children }) {
   return (
@@ -485,7 +485,7 @@ export default function RootLayout({ children }) {
 // vite.config.ts
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
-import { tailwindStyled } from "zares/vite"
+import { tailwindStyled } from "zares-css/vite"
 
 export default defineConfig({
   plugins: [react(), tailwindStyled()],
@@ -496,7 +496,7 @@ export default defineConfig({
 
 ```js
 // rspack.config.js
-import { tailwindStyled } from "zares/rspack"
+import { tailwindStyled } from "zares-css/rspack"
 
 ---
 
@@ -600,7 +600,7 @@ export default function RootLayout({ children }) {
 
 ```tsx
 import { useTheme } from "@/components/ThemeProvider";
-import { tw } from "zares";
+import { tw } from "zares-css";
 
 const ThemeButton = tw.button`
   px-4 py-2 rounded-lg
@@ -665,12 +665,12 @@ npx tw benchmark   # Benchmark performa scanner + compiler
 
 ```tsx
 // Tambahkan ke layout untuk inspeksi komponen di browser
-import { TwDevTools } from "zares/devtools"
+import { TwDevTools } from "zares-css/devtools"
 
 // Atau pakai dynamic import untuk Next.js (ssr: false wajib)
 import dynamic from "next/dynamic"
 const DevTools = dynamic(
-  () => import("zares/devtools").then(m => ({ default: m.TwDevTools })),
+  () => import("zares-css/devtools").then(m => ({ default: m.TwDevTools })),
   { ssr: false }
 )
 ```
@@ -725,7 +725,7 @@ Nav.unknown  // ❌ TypeScript error
 
 Diukur di Node.js 22, Rust 1.75, M1 MacBook Pro.
 
-| Operasi | zares | Tailwind CSS (JS) | Speedup |
+| Operasi | zares-css | Tailwind CSS (JS) | Speedup |
 |---|---|---|---|
 | Scan 1000 file | **0.8 ms** | ~340 ms | **~425×** |
 | Compile 500 class | **0.02 ms** | ~1.2 ms | **~60×** |
@@ -749,7 +749,7 @@ Diukur di Node.js 22, Rust 1.75, M1 MacBook Pro.
 ## Arsitektur
 
 ```
-zares/
+zares-css/
 │
 ├── native/                     # 🦀 Rust engine (NAPI-RS)
 │   ├── src/domain/             # Core logic: variants, CSS generation, theme
