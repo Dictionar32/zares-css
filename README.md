@@ -1,26 +1,26 @@
 <div align="center">
 
-# tailwind-styled-v4
+# zares
 
-### ⚡ Rust-powered CSS-in-JS untuk React
+### ⚡ Zero-runtime Atomic Rust CSS Engine (Static)
 **Build-time compiler · Zero runtime overhead · Type-safe variants · RSC-ready**
 
-[![npm](https://img.shields.io/npm/v/tailwind-styled-v4?color=blue)](https://npmjs.com/package/tailwind-styled-v4)
-[![license](https://img.shields.io/npm/l/tailwind-styled-v4)](LICENSE)
+[![npm](https://img.shields.io/npm/v/zares?color=blue)](https://npmjs.com/package/zares)
+[![license](https://img.shields.io/npm/l/zares)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-1.75+-orange?logo=rust)](https://rust-lang.org)
 [![Node](https://img.shields.io/badge/Node.js-20+-green?logo=node.js)](https://nodejs.org)
 [![tests](https://img.shields.io/badge/tests-545%2B%20passing-brightgreen)](#)
-[![bundle](https://img.shields.io/badge/runtime-~4.5kb-green)](https://bundlephobia.com/package/tailwind-styled-v4)
+[![bundle](https://img.shields.io/badge/runtime-~4.5kb-green)](https://bundlephobia.com/package/zares)
 
 </div>
 
 ---
 
-`tailwind-styled-v4` adalah library styling React yang menggabungkan **DX styled-components** dengan **performa Tailwind CSS v4** — dikompilasi oleh engine Rust. Tulis komponen sekali dengan `tw.button({ variants })`, Rust extract dan optimasi seluruh CSS di build time.
+`zares` adalah library styling React yang menggabungkan **DX styled-components** dengan **performa Tailwind CSS v4** — dikompilasi oleh engine Rust. Tulis komponen sekali dengan `tw.button({ variants })`, Rust extract dan optimasi seluruh CSS di build time.
 
 **Perbandingan:**
 
-| | tailwind-styled-v4 | styled-components | Tailwind biasa | Panda CSS |
+| | zares | styled-components | Tailwind biasa | Panda CSS |
 |---|---|---|---|---|
 | Build-time CSS | ✅ | ❌ runtime inject | ✅ | ✅ |
 | Runtime JS | ~0 | ~15KB | ~0 | ~0 |
@@ -36,7 +36,7 @@
 ## Instalasi
 
 ```bash
-npm install tailwind-styled-v4
+npm install zares
 npx tw setup
 ```
 
@@ -51,7 +51,7 @@ npx tw setup
 API paling sederhana — satu tag, satu string kelas.
 
 ```tsx
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares"
 
 const Button = tw.button`
   inline-flex items-center rounded-lg px-4 py-2
@@ -140,7 +140,7 @@ Tag prefix di-strip otomatis dari TypeScript inference — `Card.title` bukan `C
 Untuk styling non-komponen (className string) — berguna di utility functions, dynamic class lists, dll.
 
 ```tsx
-import { cv } from "tailwind-styled-v4"
+import { cv } from "zares"
 
 const badge = cv({
   base: "inline-flex items-center gap-1.5 rounded-full font-medium",
@@ -275,7 +275,7 @@ Breakpoint default: `xs=240px`, `sm=320px`, `md=640px`, `lg=1024px`, `xl=1280px`
 Komponen yang di-enforce hanya boleh render di server. Dev warning otomatis jika render di browser.
 
 ```tsx
-import { server } from "tailwind-styled-v4"
+import { server } from "zares"
 
 // Sama persis API-nya dengan tw — tapi compiler enforce server-only
 const PageHeader = server.header({
@@ -306,7 +306,7 @@ const AvatarRoot = server.div({
 Untuk design system dengan token terpusat. Token di-inject sebagai CSS custom properties `--sys-{group}-{name}`.
 
 ```tsx
-import { createStyledSystem } from "tailwind-styled-v4"
+import { createStyledSystem } from "zares"
 
 const ui = createStyledSystem({
   tokens: {
@@ -358,7 +358,7 @@ ui.setTokens({ colors: { primary: "#8b5cf6" } })
 Token yang bisa diupdate runtime dan subscribe ke perubahannya.
 
 ```tsx
-import { liveToken, tokenVar, createUseTokens } from "tailwind-styled-v4"
+import { liveToken, tokenVar, createUseTokens } from "zares"
 
 // Deklarasi token
 const tokens = liveToken({
@@ -395,7 +395,7 @@ tokens.primary.set("#8b5cf6")
 Utility untuk merge dan deduplicate Tailwind classes.
 
 ```tsx
-import { cn, cx, twMerge } from "tailwind-styled-v4"
+import { cn, cx, twMerge } from "zares"
 
 // cn — merge dengan dedup (alias twMerge)
 cn("px-4 py-2", isActive && "bg-blue-500", className)
@@ -415,7 +415,7 @@ twMerge("px-4 px-8")  // → "px-8" (konflik di-resolve, yang terakhir menang)
 
 **`next.config.ts`:**
 ```ts
-import { withTailwindStyled } from "tailwind-styled-v4/next"
+import { withTailwindStyled } from "zares/next"
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {}
@@ -429,7 +429,7 @@ export default withTailwindStyled({
 
 **`layout.tsx`:**
 ```tsx
-import { TwCssInjector } from "tailwind-styled-v4/runtime-css"
+import { TwCssInjector } from "zares/runtime-css"
 
 export default function RootLayout({ children }) {
   return (
@@ -485,7 +485,7 @@ export default function RootLayout({ children }) {
 // vite.config.ts
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
-import { tailwindStyled } from "tailwind-styled-v4/vite"
+import { tailwindStyled } from "zares/vite"
 
 export default defineConfig({
   plugins: [react(), tailwindStyled()],
@@ -496,7 +496,7 @@ export default defineConfig({
 
 ```js
 // rspack.config.js
-import { tailwindStyled } from "tailwind-styled-v4/rspack"
+import { tailwindStyled } from "zares/rspack"
 
 ---
 
@@ -600,7 +600,7 @@ export default function RootLayout({ children }) {
 
 ```tsx
 import { useTheme } from "@/components/ThemeProvider";
-import { tw } from "tailwind-styled-v4";
+import { tw } from "zares";
 
 const ThemeButton = tw.button`
   px-4 py-2 rounded-lg
@@ -665,12 +665,12 @@ npx tw benchmark   # Benchmark performa scanner + compiler
 
 ```tsx
 // Tambahkan ke layout untuk inspeksi komponen di browser
-import { TwDevTools } from "tailwind-styled-v4/devtools"
+import { TwDevTools } from "zares/devtools"
 
 // Atau pakai dynamic import untuk Next.js (ssr: false wajib)
 import dynamic from "next/dynamic"
 const DevTools = dynamic(
-  () => import("tailwind-styled-v4/devtools").then(m => ({ default: m.TwDevTools })),
+  () => import("zares/devtools").then(m => ({ default: m.TwDevTools })),
   { ssr: false }
 )
 ```
@@ -725,7 +725,7 @@ Nav.unknown  // ❌ TypeScript error
 
 Diukur di Node.js 22, Rust 1.75, M1 MacBook Pro.
 
-| Operasi | tailwind-styled-v4 | Tailwind CSS (JS) | Speedup |
+| Operasi | zares | Tailwind CSS (JS) | Speedup |
 |---|---|---|---|
 | Scan 1000 file | **0.8 ms** | ~340 ms | **~425×** |
 | Compile 500 class | **0.02 ms** | ~1.2 ms | **~60×** |
@@ -749,7 +749,7 @@ Diukur di Node.js 22, Rust 1.75, M1 MacBook Pro.
 ## Arsitektur
 
 ```
-tailwind-styled-v4/
+zares/
 │
 ├── native/                     # 🦀 Rust engine (NAPI-RS)
 │   ├── src/domain/             # Core logic: variants, CSS generation, theme
@@ -825,8 +825,8 @@ Tailwind-styled-v4 melakukan serangkaian operasi sophisticated di build time. Ba
 ## Development
 
 ```bash
-git clone https://github.com/Dictionar32/tailwind-styled-v4.git
-cd tailwind-styled-v4
+git clone https://github.com/Dictionar32/zares.git
+cd zares
 
 npm install
 

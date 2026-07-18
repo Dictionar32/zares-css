@@ -1,0 +1,40 @@
+# zares
+
+> Zero-runtime Atomic Rust CSS Engine (Static). Write components with a styled-components-inspired API (`tw.button({...})`); a Rust engine compiles them to static Tailwind CSS at build time. No runtime CSS-in-JS.
+
+## Getting Started
+- [Installation](https://github.com/Dictionar32/zares/blob/main/README.md#instalasi): `npm install zares` + `npx tw setup`
+- [Setup: Next.js](https://github.com/Dictionar32/zares/blob/main/README.md#nextjs)
+- [Setup: Vite](https://github.com/Dictionar32/zares/blob/main/README.md#vite)
+- [Setup: Rspack](https://github.com/Dictionar32/zares/blob/main/README.md#rspack)
+
+## API Reference
+- [Template Literal](https://github.com/Dictionar32/zares/blob/main/README.md#1-template-literal): `` tw.button`...` ``
+- [Object Config](https://github.com/Dictionar32/zares/blob/main/README.md#2-object-config-direkomendasikan): variants, compoundVariants, defaultVariants
+- [Sub-Components](https://github.com/Dictionar32/zares/blob/main/README.md#3-sub-components): `sub: { "tag:name": "..." }`
+- [`cv()` Class Variant Function](https://github.com/Dictionar32/zares/blob/main/README.md#4-cv--class-variant-function)
+- [`states` Boolean Props](https://github.com/Dictionar32/zares/blob/main/README.md#5-states--boolean-props)
+- [`state` CSS Data-Attribute](https://github.com/Dictionar32/zares/blob/main/README.md#6-state--css-data-attribute-zero-js-state)
+- [`.extend()` Inheritance](https://github.com/Dictionar32/zares/blob/main/README.md#7-extend--inheritance)
+- [`container` Container Queries](https://github.com/Dictionar32/zares/blob/main/README.md#8-container--container-queries)
+- [`server.` Server Components](https://github.com/Dictionar32/zares/blob/main/README.md#9-server--server-components-only)
+- [`createStyledSystem()` Design Token Factory](https://github.com/Dictionar32/zares/blob/main/README.md#10-createstyledsystem--design-system-factory)
+- [`liveToken()` Live Design Tokens](https://github.com/Dictionar32/zares/blob/main/README.md#11-livetoken--live-design-tokens)
+- [`cn()`, `cx()`, `twMerge`](https://github.com/Dictionar32/zares/blob/main/README.md#12-cn-cx-twmerge)
+
+## Theming
+- [Theme Setup](https://github.com/Dictionar32/zares/blob/main/README.md#setup-tema)
+- [Using Theme in Components](https://github.com/Dictionar32/zares/blob/main/README.md#gunakan-di-komponen)
+
+## Tooling
+- [CLI](https://github.com/Dictionar32/zares/blob/main/README.md#cli)
+- [DevTools](https://github.com/Dictionar32/zares/blob/main/README.md#devtools)
+- [TypeScript](https://github.com/Dictionar32/zares/blob/main/README.md#typescript)
+- [Benchmark](https://github.com/Dictionar32/zares/blob/main/README.md#benchmark)
+- [Environment Variables](https://github.com/Dictionar32/zares/blob/main/README.md#environment-variables)
+- [Architecture](https://github.com/Dictionar32/zares/blob/main/README.md#arsitektur)
+
+## Optional
+- [Changelog](https://github.com/Dictionar32/zares/blob/main/CHANGELOG.md)
+- [Known Issues](https://github.com/Dictionar32/zares/blob/main/known-issues.md)
+- [Contributing](https://github.com/Dictionar32/zares/blob/main/README.md#contributing)
