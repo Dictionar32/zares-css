@@ -28,6 +28,7 @@ export interface TransformResult {
   changed: boolean
   rscJson?: string
   metadataJson?: string
+  dynamicCssJson?: string
 }
 
 export interface ScanResult {

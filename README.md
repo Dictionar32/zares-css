@@ -135,6 +135,69 @@ Tag prefix di-strip otomatis dari TypeScript inference — `Card.title` bukan `C
 
 ---
 
+### 3.5. Dynamic Values — `${...}` (Mode 2)
+
+Nilai arbitrary yang gak diketahui saat build time (warna dari props, theme runtime, dll) bisa ditulis pakai template placeholder `${...}` di dalam kelas Tailwind bracket (`prefix-[${expr}]`). Rust engine mendeteksi ini otomatis — **tanpa** hint manual (`liveToken`, `setToken`) — dan generate CSS Variable saat build:
+
+```tsx
+const Card = tw.div({
+  base: `rounded-xl shadow-sm p-6 bg-[${bgColor}]`,
+  sub: {
+    header: { tag: "div", base: `text-lg font-bold text-[${titleColor}]` },
+  },
+})
+```
+
+Di-compile jadi:
+
+```css
+.tw-Card-bgColor { background-color: var(--Card-bgColor, transparent); }
+.tw-Card-header-titleColor { color: var(--Card-header-titleColor, inherit); }
+```
+
+**Pemakaian — langsung lewat props, gak perlu `style={}` atau hint manual:**
+
+```tsx
+<Card bgColor={userColor} titleColor={titleColor} />
+```
+
+Nama prop-nya persis nama variable di dalam `${...}` (`bgColor`, `titleColor`). Di balik layar, komponen yang di-generate otomatis nge-destructure prop itu, jadiin CSS custom property di `style` root element (di-merge sama `style` yang kamu kasih sendiri), terus di-`delete` dari props sebelum nyampe ke elemen DOM — jadi gak ada warning "unknown DOM attribute".
+
+CSS custom property itu **inherit ke bawah lewat DOM tree** secara native (bagian dari spek CSS), jadi walau prop kayak `titleColor` cuma di-set sekali di komponen paling luar (`<Card titleColor={...}>`), nilainya tetep nyampe ke `.tw-Card-header-titleColor` yang dipakai di `Card.header` — asalkan `Card.header` di-render sebagai children DOM beneran (`<Card><Card.header>...</Card.header></Card>`), bukan dirender terpisah di luar `<Card>`.
+
+**Kalau kamu tetep butuh `style={}` manual** (misal buat set CSS var yang gak berasal dari `${...}` di definisi tw.object), itu masih jalan seperti biasa — dua-duanya bisa dipakai bareng, `style` kamu di-merge, bukan di-timpa.
+
+**Catatan penamaan prop:** kalau nama variable yang sama (`${x}`) dipakai di beberapa tempat berbeda (`base` dan `sub.header` misalnya), itu **jadi satu prop yang sama** — nge-drive beberapa CSS Variable sekaligus. Ini simplifikasi yang disengaja, bukan bug — kalau kamu tulis `${x}` dua kali, dianggap memang mau nilai yang sama.
+
+
+**⚠️ Ambiguitas prefix `text-` — dan cara ngatasinnya (sesuai dokumentasi resmi Tailwind):**
+
+`text-` di Tailwind punya dua arti tergantung isinya — warna (`text-red-500`) atau ukuran font (`text-lg`). Untuk token dinamis, `text-[${expr}]` (bentuk polos) **selalu** ditafsirkan sebagai **`color`**, bukan `font-size`.
+
+Tailwind sendiri punya jawaban resmi buat ini — [section "Resolving ambiguities"](https://tailwindcss.com/docs/adding-custom-styles#resolving-ambiguities) — pakai CSS data-type hint dengan parentheses, dan engine ini ngedukung persis sintaks itu:
+
+```tsx
+base: `text-(length:${fontSize}) text-(color:${textColor})`
+// → font-size: var(--Comp-fontSize, inherit)
+// → color: var(--Comp-textColor, inherit)
+```
+
+(Bentuk bracket versi Tailwind v3 lama, `text-[length:${x}]`, juga didukung buat back-compat.)
+
+Buat CSS property yang Tailwind emang gak punya utility-nya sama sekali, pakai **arbitrary property** syntax (`[property:${x}]`) — beda dari hint di atas, ini bukan buat disambiguasi tapi buat property yang bener-bener di luar Tailwind:
+
+```tsx
+base: `[mask-type:${maskType}]`
+```
+
+Prefix lain yang belum punya pemetaan eksplisit (di luar `bg`, `text`, `border`, `fill`, `stroke`, `p`/`px`/`py`/`pt`/`pb`/`pl`/`pr`, `m`/`mx`/`my`, `w`, `h`, `gap`, `rounded`, `opacity`, `z`) akan tetap menghasilkan CSS Variable, tapi dengan `property: unset` kalau ditulis pakai bentuk `prefix-[${x}]` polos — pakai bentuk hint atau `[property:${x}]` buat hasil yang pasti.
+
+Prefix→property mapping-nya sengaja hardcoded manual (bukan diturunkan dari Lightning CSS atau parser CSS generik manapun — Tailwind bukan bagian dari spesifikasi CSS, jadi gak ada parser yang bisa "menebak" `bg` = `background-color` tanpa tabel referensi). Ini pola yang sama dipakai di seluruh engine (lihat `tw_property_map` di jalur atomic CSS).
+
+📖 Baca lengkapnya (cara kerja, tabel prefix, semua batasan) di [`docs/DYNAMIC_PROPS.md`](./docs/DYNAMIC_PROPS.md).
+
+---
+
 ### 4. `cv()` — Class Variant Function
 
 Untuk styling non-komponen (className string) — berguna di utility functions, dynamic class lists, dll.

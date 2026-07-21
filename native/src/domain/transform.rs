@@ -12,7 +12,10 @@ use crate::ast_optimizer;
 pub(crate) use crate::domain::transform_components::{
     build_metadata_json, parse_subcomponent_blocks,
 };
-use crate::domain::transform_components::{render_compound_component, render_static_component};
+use crate::domain::transform_components::{
+    delete_dynamic_props_line, dynamic_style_assign_line, render_compound_component,
+    render_static_component,
+};
 pub use crate::domain::transform_parser::{normalise_classes, parse_classes_inner};
 use crate::shared::utils::{serde_json_string, short_hash};
 
@@ -176,6 +179,10 @@ pub struct TransformResult {
     pub changed: bool,
     pub rsc_json: Option<String>,
     pub metadata_json: Option<String>,
+    /// Mode 2: CSS rules generated for `${...}` (arbitrary-value dynamic) tokens,
+    /// e.g. `.tw-Card-color { background-color: var(--Card-color, transparent); }`.
+    /// None if no dynamic tokens were found in this file.
+    pub dynamic_css_json: Option<String>,
 }
 
 #[napi(object)]
@@ -192,8 +199,244 @@ pub struct RscAnalysis {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-fn is_dynamic(content: &str) -> bool {
-    content.contains("${")
+// ─────────────────────────────────────────────────────────────────────────────
+// Mode 2 — "Engine Sadar dari Awal": arbitrary-value `${...}` tokens become
+// CSS Variables at build time instead of being skipped / baked as garbage.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Matches a single class token that is ENTIRELY a dynamic arbitrary value,
+/// e.g. `bg-[${color}]`, `text-[${titleColor}]`, `border-t-[${x}]`,
+/// `translate-x-[${x}]`. Prefix allows internal hyphens (`border-t`, `min-w`,
+/// `translate-x`, `skew-x`) since Tailwind v4 has many multi-word utility
+/// names. Mixed tokens (static prefix glued to a partial `${}`) are
+/// intentionally not matched — those are almost certainly not valid
+/// Tailwind arbitrary-value syntax to begin with.
+static RE_DYNAMIC_TOKEN: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^([a-zA-Z]+(?:-[a-zA-Z]+)*)-\[\$\{\s*([A-Za-z0-9_.]+)\s*\}\]$").unwrap());
+
+/// Matches Tailwind's **explicit arbitrary-property** syntax with a dynamic
+/// value: `[font-size:${x}]`, `[color:${x}]`, `[mask-type:${x}]`. This is for
+/// properties Tailwind has no utility for at all — see "Arbitrary properties"
+/// in the Tailwind docs. No prefix→property table lookup needed at all here:
+/// the property name IS what's written.
+static RE_DYNAMIC_ARBITRARY_PROPERTY: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\[([a-zA-Z-]+):\$\{\s*([A-Za-z0-9_.]+)\s*\}\]$").unwrap()
+});
+
+/// Matches Tailwind's **own official disambiguation syntax** — a CSS data-type
+/// hint inside parens — documented under "Resolving ambiguities":
+/// `text-(length:${x})` → font-size, `text-(color:${x})` → color. This is the
+/// *correct*, framework-native answer to prefixes like `text-` that map to
+/// different properties depending on the value's shape (confirmed against
+/// live tailwindcss.com docs, v4.3, 2026).
+static RE_DYNAMIC_HINT_PARENS: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^([a-zA-Z]+(?:-[a-zA-Z]+)*)-\(([a-zA-Z]+):\$\{\s*([A-Za-z0-9_.]+)\s*\}\)$").unwrap()
+});
+
+/// Same idea as `RE_DYNAMIC_HINT_PARENS` but with the older (Tailwind v3)
+/// bracket form: `text-[length:${x}]`. Kept for projects still on the v3-style
+/// convention — Tailwind v4 prefers the parens form above.
+static RE_DYNAMIC_HINT_BRACKETS: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^([a-zA-Z]+(?:-[a-zA-Z]+)*)-\[([a-zA-Z]+):\$\{\s*([A-Za-z0-9_.]+)\s*\}\]$").unwrap()
+});
+
+fn sanitize_ident(s: &str) -> String {
+    s.chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '_' })
+        .collect()
+}
+
+/// Resolve a (prefix, CSS-data-type hint) pair to a concrete CSS property,
+/// mirroring Tailwind's own "Resolving ambiguities" table. Only `text-` has a
+/// documented real-world collision (font-size vs color) — other prefixes fall
+/// back to `dynamic_prop_for_prefix`, ignoring the hint, if the combo isn't
+/// one of the known ambiguous ones.
+fn hinted_property_for(prefix: &str, hint: &str) -> &'static str {
+    match (prefix, hint) {
+        ("text", "length") => "font-size",
+        ("text", "color") => "color",
+        _ => dynamic_prop_for_prefix(prefix),
+    }
+}
+
+/// Best-effort prefix → CSS property mapping for dynamic arbitrary values.
+/// Covers Tailwind v4's documented utility categories (confirmed against
+/// official Tailwind docs, 2026): spacing, sizing, position/inset, transforms,
+/// and the "color utilities" family (bg/text/border/outline/ring/accent/fill/stroke
+/// — see https://tailwindcss.com/docs/colors#using-color-utilities).
+///
+/// `text` is intentionally resolved as `color` (Tailwind's own most common use
+/// of a bare `text-[...]` arbitrary value in dynamic-theming contexts). This
+/// diverges on purpose from the *static* atomic engine's `tw_property_map`
+/// (`application::atomic.rs`), which resolves `text` → `font-size` — that
+/// engine handles bare utilities like `text-sm`/`text-lg` where font-size is
+/// the overwhelmingly common case; this one handles `text-[${x}]` dynamic
+/// bindings, where color is overwhelmingly the common case (theming). Two
+/// different problems, two different defaults — not a bug, see docs/DYNAMIC_PROPS.md.
+/// If you need font-size instead, use Tailwind's own disambiguation syntax:
+/// `text-(length:${x})` — see `RE_DYNAMIC_HINT_PARENS` above.
+fn dynamic_prop_for_prefix(prefix: &str) -> &'static str {
+    match prefix {
+        // ── Color utilities (Tailwind's own category grouping) ──
+        "bg" => "background-color",
+        "text" => "color",
+        "border" => "border-color",
+        "border-t" => "border-top-color",
+        "border-r" => "border-right-color",
+        "border-b" => "border-bottom-color",
+        "border-l" => "border-left-color",
+        "outline" => "outline-color",
+        "ring" => "--tw-ring-color",
+        "accent" => "accent-color",
+        "caret" => "caret-color",
+        "decoration" => "text-decoration-color",
+        "divide" => "border-color",
+        "fill" => "fill",
+        "stroke" => "stroke",
+
+        // ── Spacing ──
+        "p" => "padding",
+        "px" => "padding-inline",
+        "py" => "padding-block",
+        "pt" => "padding-top",
+        "pb" => "padding-bottom",
+        "pl" => "padding-left",
+        "pr" => "padding-right",
+        "m" => "margin",
+        "mx" => "margin-inline",
+        "my" => "margin-block",
+        "mt" => "margin-top",
+        "mb" => "margin-bottom",
+        "ml" => "margin-left",
+        "mr" => "margin-right",
+        "gap" => "gap",
+
+        // ── Sizing ──
+        "w" => "width",
+        "h" => "height",
+        "min-w" => "min-width",
+        "max-w" => "max-width",
+        "min-h" => "min-height",
+        "max-h" => "max-height",
+        "size" => "width", // Tailwind's `size-*` sets both width+height; we can only bind one property per var, width is the more common intent
+
+        // ── Position / inset ──
+        "top" => "top",
+        "right" => "right",
+        "bottom" => "bottom",
+        "left" => "left",
+        "inset" => "inset",
+        "z" => "z-index",
+
+        // ── Transforms ──
+        "translate-x" => "--tw-translate-x",
+        "translate-y" => "--tw-translate-y",
+        "scale" => "--tw-scale-x", // Tailwind splits scale-x/scale-y internally; plain `scale` needs both — see limitation notes
+        "rotate" => "rotate",
+        "skew-x" => "--tw-skew-x",
+        "skew-y" => "--tw-skew-y",
+
+        // ── Typography ──
+        "tracking" => "letter-spacing",
+        "leading" => "line-height",
+        "indent" => "text-indent",
+
+        // ── Effects / misc ──
+        "rounded" => "border-radius",
+        "opacity" => "opacity",
+        "shadow" => "--tw-shadow-color",
+        "blur" => "--tw-blur",
+
+        _ => "unset", // unknown prefix — still emit a var, but don't guess a property; use the hint or arbitrary-property syntax instead
+    }
+}
+
+fn dynamic_fallback_for(prop: &str) -> &'static str {
+    match prop {
+        "background-color" | "border-color" | "border-top-color" | "border-right-color"
+        | "border-bottom-color" | "border-left-color" | "outline-color" | "--tw-ring-color"
+        | "fill" | "stroke" | "--tw-shadow-color" => "transparent",
+        "color" | "accent-color" | "caret-color" | "text-decoration-color" => "inherit",
+        "padding" | "padding-inline" | "padding-block" | "padding-top" | "padding-bottom"
+        | "padding-left" | "padding-right" | "margin" | "margin-inline" | "margin-block"
+        | "margin-top" | "margin-bottom" | "margin-left" | "margin-right" | "gap"
+        | "border-radius" | "z-index" | "top" | "right" | "bottom" | "left" | "inset"
+        | "--tw-translate-x" | "--tw-translate-y" | "rotate" | "--tw-skew-x" | "--tw-skew-y"
+        | "text-indent" => "0",
+        "width" | "height" | "min-width" | "max-width" | "min-height" | "max-height" => "auto",
+        "opacity" => "1",
+        "font-size" | "line-height" | "letter-spacing" => "inherit",
+        "--tw-scale-x" | "--tw-scale-y" => "1",
+        "--tw-blur" => "0",
+        _ => "initial",
+    }
+}
+
+/// Convert one dynamic token into a scoped static class name + its generated
+/// CSS rule + the raw source expression. Tries forms, in order:
+///   1. `[property:${expr}]`     — arbitrary property Tailwind has no utility for.
+///   2. `prefix-(hint:${expr})`  — Tailwind's own ambiguity-resolution hint (v4 parens).
+///   3. `prefix-[hint:${expr}]`  — same hint, older v3 bracket form.
+///   4. `prefix-[${expr}]`      — plain prefix, resolved via `dynamic_prop_for_prefix`.
+/// `comp` is the component name, `sub` an optional sub-component name — both
+/// feed the CSS Variable naming so `--Card-bg` and `--Card-header-titleColor`
+/// don't collide across components/sub-parts.
+fn parse_dynamic_token(token: &str, comp: &str, sub: Option<&str>) -> Option<(String, String, String)> {
+    let (prop, raw_expr): (String, String) =
+        if let Some(cap) = RE_DYNAMIC_ARBITRARY_PROPERTY.captures(token) {
+            (cap[1].to_string(), cap[2].to_string())
+        } else if let Some(cap) = RE_DYNAMIC_HINT_PARENS.captures(token) {
+            (hinted_property_for(&cap[1], &cap[2]).to_string(), cap[3].to_string())
+        } else if let Some(cap) = RE_DYNAMIC_HINT_BRACKETS.captures(token) {
+            (hinted_property_for(&cap[1], &cap[2]).to_string(), cap[3].to_string())
+        } else if let Some(cap) = RE_DYNAMIC_TOKEN.captures(token) {
+            (dynamic_prop_for_prefix(&cap[1]).to_string(), cap[2].to_string())
+        } else {
+            return None;
+        };
+
+    let expr = sanitize_ident(&raw_expr);
+    let fallback = dynamic_fallback_for(&prop);
+    let scope = sub.map(|s| format!("-{}", s)).unwrap_or_default();
+    let var_name = format!("--{}{}-{}", comp, scope, expr);
+    let class_name = format!("tw-{}{}-{}", comp, scope, expr);
+    let css_rule = format!(".{} {{ {}: var({}, {}); }}", class_name, prop, var_name, fallback);
+
+    Some((class_name, css_rule, raw_expr))
+}
+
+/// Process a raw (pre-normalised) class string: static tokens pass through
+/// untouched, dynamic `${...}` tokens are rewritten into their scoped class
+/// name; their generated CSS rule is pushed into `out_css`, and their
+/// `(source_prop_name, css_var_name)` pair is pushed into `out_props` — this
+/// is what powers Approach 3 (auto-generated component props, see README §3.5).
+fn resolve_dynamic_classes(
+    raw: &str,
+    comp: &str,
+    sub: Option<&str>,
+    out_css: &mut Vec<String>,
+    out_props: &mut Vec<(String, String)>,
+) -> String {
+    if !raw.contains("${") {
+        return raw.to_string();
+    }
+    raw.split_whitespace()
+        .map(|tok| match parse_dynamic_token(tok, comp, sub) {
+            Some((class_name, css_rule, source)) => {
+                out_css.push(css_rule);
+                let var_name = format!(
+                    "--{}{}-{}",
+                    comp,
+                    sub.map(|s| format!("-{}", s)).unwrap_or_default(),
+                    sanitize_ident(&source)
+                );
+                out_props.push((source, var_name));
+                class_name
+            }
+            None => tok.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -441,6 +684,7 @@ fn render_object_config_component(
     sizes: &HashMap<String, String>,
     states: &HashMap<String, String>,
     sub: &HashMap<String, SubEntry>,
+    dynamic_props: &[(String, String)],
 ) -> String {
     // ── Build the forwardRef body lines ──────────────────────────────────────
     let mut body: Vec<String> = Vec::new();
@@ -451,6 +695,12 @@ fn render_object_config_component(
         "  var _cls = [{}];",
         serde_json_string(base_classes)
     ));
+    // Approach 3 (README §3.5): dynamic source props (`bg`, `headerColor`, ...)
+    // get pulled into a CSS Variable `style`, merged with any caller `style`.
+    if !dynamic_props.is_empty() {
+        let dyn_line = dynamic_style_assign_line(dynamic_props);
+        body.push(dyn_line.trim_end_matches('\n').to_string());
+    }
 
     // Variant prop checks — inject ?? "defaultValue" if defaultVariants is set
     let mut variant_keys: Vec<String> = Vec::new();
@@ -523,10 +773,21 @@ fn render_object_config_component(
     for k in &state_keys {
         deletes.push(format!("delete _p.{};", k));
     }
+    let mut seen_dyn = std::collections::HashSet::new();
+    for (source, _) in dynamic_props {
+        if seen_dyn.insert(source.clone()) {
+            deletes.push(format!("delete _p.{};", source));
+        }
+    }
     body.push(format!("  {}", deletes.join(" ")));
 
+    let style_field = if dynamic_props.is_empty() {
+        String::new()
+    } else {
+        ", style: _st".to_string()
+    };
     body.push(format!(
-        "  return React.createElement(\"{tag}\", Object.assign({{ref: ref}}, _p, {{className: _cls.filter(Boolean).join(\" \")}}));",
+        "  return React.createElement(\"{tag}\", Object.assign({{ref: ref}}, _p, {{className: _cls.filter(Boolean).join(\" \"){style_field}}}));",
         tag = tag,
     ));
     body.push("})".to_string());
@@ -734,6 +995,7 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
             changed: false,
             rsc_json: None,
             metadata_json: None,
+            dynamic_css_json: None,
         };
     }
 
@@ -745,6 +1007,8 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
     let mut needs_react = false;
     // OPTIMIZATION: pre-allocate metadata (max 1 per component found)
     let mut all_metadata: Vec<String> = Vec::with_capacity(8);
+    // Mode 2: generated `.tw-Comp-prop { prop: var(--Comp-prop, fallback); }` rules
+    let mut dynamic_css: Vec<String> = Vec::new();
 
     // ─ OPTIMIZATION (Phase 1.3): Build component name index once, O(1) lookups in loop
     let comp_name_index = build_component_name_index(&source);
@@ -761,10 +1025,6 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
             let (ast_templates, _, had_error) = ast_optimizer::extract_templates_from_ast(&snap);
             if !had_error {
                 for tmpl in ast_templates {
-                    if is_dynamic(&tmpl.content) {
-                        continue;
-                    }
-
                     let comp_name = comp_name_index
                         .iter()
                         .filter(|(_, &pos)| pos < tmpl.position)
@@ -772,8 +1032,21 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
                         .map(|(name, _)| name.clone())
                         .unwrap_or_else(|| format!("Tw_{}", tmpl.tag));
 
+                    // Mode 2: rewrite `${...}` tokens in the raw content BEFORE
+                    // splitting into base/sub-component blocks, so both paths see
+                    // plain static class names (their own scoped `tw-Comp-prop`
+                    // class) instead of unresolved template placeholders.
+                    let mut comp_dyn_props: Vec<(String, String)> = Vec::new();
+                    let resolved_content = resolve_dynamic_classes(
+                        &tmpl.content,
+                        &comp_name,
+                        None,
+                        &mut dynamic_css,
+                        &mut comp_dyn_props,
+                    );
+
                     let (base_content, sub_comps) =
-                        parse_subcomponent_blocks(&tmpl.content, &comp_name);
+                        parse_subcomponent_blocks(&resolved_content, &comp_name);
                     let base_classes_vec = normalise_classes(&base_content);
                     let base_classes = base_classes_vec.join(" ");
 
@@ -806,7 +1079,7 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
 
                     let fn_name = format!("_Tw_{}", comp_name);
                     let replacement = if sub_comps.is_empty() {
-                        render_static_component(&tmpl.tag, &base_classes, &fn_name, with_sub)
+                        render_static_component(&tmpl.tag, &base_classes, &fn_name, with_sub, &comp_dyn_props)
                     } else {
                         render_compound_component(
                             &tmpl.tag,
@@ -815,6 +1088,7 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
                             &sub_comps,
                             &comp_name,
                             with_sub,
+                            &comp_dyn_props,
                         )
                     };
 
@@ -836,10 +1110,6 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
                 let tag = cap[2].to_string();
                 let content = cap[3].to_string();
 
-                if is_dynamic(&content) {
-                    continue;
-                }
-
                 // ─ OPTIMIZATION (Phase 1.3): Use pre-built index instead of O(n×m) regex scan
                 // Find nearest component name before this template by looking in index
                 let comp_name = {
@@ -852,7 +1122,18 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
                         .unwrap_or_else(|| format!("Tw_{}", tag))
                 };
 
-                let (base_content, sub_comps) = parse_subcomponent_blocks(&content, &comp_name);
+                // Mode 2: resolve `${...}` tokens into scoped CSS Variable classes
+                // instead of skipping the whole component (see AST path above).
+                let mut comp_dyn_props: Vec<(String, String)> = Vec::new();
+                let resolved_content = resolve_dynamic_classes(
+                    &content,
+                    &comp_name,
+                    None,
+                    &mut dynamic_css,
+                    &mut comp_dyn_props,
+                );
+
+                let (base_content, sub_comps) = parse_subcomponent_blocks(&resolved_content, &comp_name);
 
                 let base_classes_vec = normalise_classes(&base_content);
                 let base_classes = base_classes_vec.join(" ");
@@ -879,9 +1160,17 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
 
                 let fn_name = format!("_Tw_{}", comp_name);
                 let replacement = if sub_comps.is_empty() {
-                    render_static_component(&tag, &base_classes, &fn_name, with_sub)
+                    render_static_component(&tag, &base_classes, &fn_name, with_sub, &comp_dyn_props)
                 } else {
-                    render_compound_component(&tag, &base_classes, &fn_name, &sub_comps, &comp_name, with_sub)
+                    render_compound_component(
+                        &tag,
+                        &base_classes,
+                        &fn_name,
+                        &sub_comps,
+                        &comp_name,
+                        with_sub,
+                        &comp_dyn_props,
+                    )
                 };
 
                 replacements.push((full_match, replacement));
@@ -905,22 +1194,42 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
             let wrapped_comp = cap[1].to_string();
             let content = cap[2].to_string();
 
-            if is_dynamic(&content) {
-                continue;
-            }
+            // Mode 2: resolve `${...}` tokens instead of skipping the wrapper.
+            let mut comp_dyn_props: Vec<(String, String)> = Vec::new();
+            let resolved_content = resolve_dynamic_classes(
+                &content,
+                &wrapped_comp,
+                None,
+                &mut dynamic_css,
+                &mut comp_dyn_props,
+            );
 
-            let extra = normalise_classes(&content).join(" ");
+            let extra = normalise_classes(&resolved_content).join(" ");
             all_classes.extend(extra.split_whitespace().map(String::from));
             changed = true;
             needs_react = true;
 
             let fn_name = format!("_TwWrap_{}", wrapped_comp);
-            let replacement = format!(
-                "React.forwardRef(function {fn_name}(props, ref) {{\n  var _c = [{extra_json}, props.className].filter(Boolean).join(\" \");\n  return React.createElement({wrapped}, Object.assign({{}}, props, {{ ref, className: _c }}));\n}})",
-                fn_name = fn_name,
-                extra_json = serde_json_string(&extra),
-                wrapped = wrapped_comp,
-            );
+            let replacement = if comp_dyn_props.is_empty() {
+                format!(
+                    "React.forwardRef(function {fn_name}(props, ref) {{\n  var _c = [{extra_json}, props.className].filter(Boolean).join(\" \");\n  return React.createElement({wrapped}, Object.assign({{}}, props, {{ ref, className: _c }}));\n}})",
+                    fn_name = fn_name,
+                    extra_json = serde_json_string(&extra),
+                    wrapped = wrapped_comp,
+                )
+            } else {
+                // Approach 3 (see README §3.5): dynamic source props are pulled out
+                // into a CSS Variable `style`, merged with any caller-provided
+                // `style`, and not forwarded to the wrapped component as-is.
+                let dyn_style_line = dynamic_style_assign_line(&comp_dyn_props);
+                let delete_dyn_props = delete_dynamic_props_line(&comp_dyn_props);
+                format!(
+                    "React.forwardRef(function {fn_name}(props, ref) {{\n  var _c = [{extra_json}, props.className].filter(Boolean).join(\" \");\n{dyn_style_line}  var _r = Object.assign({{}}, props);\n  delete _r.className;{delete_dyn_props}\n  return React.createElement({wrapped}, Object.assign({{}}, _r, {{ ref, className: _c, style: _st }}));\n}})",
+                    fn_name = fn_name,
+                    extra_json = serde_json_string(&extra),
+                    wrapped = wrapped_comp,
+                )
+            };
 
             replacements.push((full_match, replacement));
         }
@@ -996,29 +1305,80 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
                 }
             };
 
-            // Parse fields
-            let base_raw = extract_string_for_key(&obj_content, "base").unwrap_or_default();
-            let base_classes = normalise_classes(&base_raw).join(" ");
+            // Resolve component name from declaration (moved earlier — needed
+            // for CSS Variable naming in the Mode 2 dynamic-token resolution below).
+            let comp_name = obj_comp_index
+                .iter()
+                .filter(|(_, &pos)| pos < abs_match_start)
+                .max_by_key(|(_, &pos)| pos)
+                .map(|(name, _)| name.clone())
+                .unwrap_or_else(|| format!("Tw_{}", tag));
 
-            let variants = find_obj_section(&obj_content, "variants")
+            // Parse fields
+            let mut comp_dyn_props: Vec<(String, String)> = Vec::new();
+            let base_raw = extract_string_for_key(&obj_content, "base").unwrap_or_default();
+            let base_classes = resolve_dynamic_classes(
+                &normalise_classes(&base_raw).join(" "),
+                &comp_name,
+                None,
+                &mut dynamic_css,
+                &mut comp_dyn_props,
+            );
+
+            let mut variants = find_obj_section(&obj_content, "variants")
                 .map(parse_nested_string_map)
                 .unwrap_or_default();
+            for (variant_key, opts) in variants.iter_mut() {
+                for (opt_key, cls) in opts.iter_mut() {
+                    let scope = format!("{}-{}", variant_key, opt_key);
+                    *cls = resolve_dynamic_classes(
+                        cls,
+                        &comp_name,
+                        Some(&scope),
+                        &mut dynamic_css,
+                        &mut comp_dyn_props,
+                    );
+                }
+            }
 
             let default_variants = find_obj_section(&obj_content, "defaultVariants")
                 .map(parse_flat_string_map)
                 .unwrap_or_default();
 
-            let sizes = find_obj_section(&obj_content, "sizes")
+            let mut sizes = find_obj_section(&obj_content, "sizes")
                 .map(parse_flat_string_map)
                 .unwrap_or_default();
+            for (k, v) in sizes.iter_mut() {
+                *v = resolve_dynamic_classes(v, &comp_name, Some(k), &mut dynamic_css, &mut comp_dyn_props);
+            }
 
-            let states = find_obj_section(&obj_content, "states")
+            let mut states = find_obj_section(&obj_content, "states")
                 .map(parse_flat_string_map)
                 .unwrap_or_default();
+            for (k, v) in states.iter_mut() {
+                *v = resolve_dynamic_classes(v, &comp_name, Some(k), &mut dynamic_css, &mut comp_dyn_props);
+            }
 
-            let sub = find_obj_section(&obj_content, "sub")
+            let mut sub = find_obj_section(&obj_content, "sub")
                 .map(|s| parse_sub_map(s))
                 .unwrap_or_default();
+            for (sub_name, entry) in sub.iter_mut() {
+                entry.base = resolve_dynamic_classes(
+                    &entry.base,
+                    &comp_name,
+                    Some(sub_name),
+                    &mut dynamic_css,
+                    &mut comp_dyn_props,
+                );
+            }
+
+            // Dedup by source prop name (first occurrence wins) — if the same
+            // `${x}` name is reused across base/variants/sub, it's one prop
+            // driving potentially multiple CSS Variables. See README §3.5.
+            {
+                let mut seen = std::collections::HashSet::new();
+                comp_dyn_props.retain(|(source, _)| seen.insert(source.clone()));
+            }
 
             // Skip if the object is empty / not a TwConfig
             if base_classes.is_empty()
@@ -1048,14 +1408,6 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
                 all_classes.extend(normalise_classes(&entry.base));
             }
 
-            // Resolve component name from declaration
-            let comp_name = obj_comp_index
-                .iter()
-                .filter(|(_, &pos)| pos < abs_match_start)
-                .max_by_key(|(_, &pos)| pos)
-                .map(|(name, _)| name.clone())
-                .unwrap_or_else(|| format!("Tw_{}", tag));
-                
             // Pengaman: lewati penggantian statis jika binding ini nantinya dirangkai (chained)
             // melalui API runtime (.extend / .withVariants / .animate / .withSub).
             // forwardRef statis yang dihasilkan di bawah ini adalah komponen polos —
@@ -1090,6 +1442,7 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
                 &sizes,
                 &states,
                 &sub,
+                &comp_dyn_props,
             );
 
             replacements.push((full_match, replacement));
@@ -1111,6 +1464,7 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
             changed: false,
             rsc_json: None,
             metadata_json: None,
+            dynamic_css_json: None,
         };
     }
     if needs_react
@@ -1193,13 +1547,59 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
         rsc.is_server, rsc.needs_client_directive
     ));
 
+    let dynamic_css_json = if dynamic_css.is_empty() {
+        None
+    } else {
+        Some(format!(
+            "[{}]",
+            dynamic_css
+                .iter()
+                .map(|s| serde_json_string(s))
+                .collect::<Vec<_>>()
+                .join(",")
+        ))
+    };
+
     TransformResult {
         code,
         classes: all_classes,
         changed: true,
         rsc_json,
         metadata_json,
+        dynamic_css_json,
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+#[cfg(test)]
+mod mode2_probe_tests {
+    use super::*;
+
+    #[test]
+    fn probe_dynamic_template_literal() {
+        let src = r#"
+const Card = tw.div`rounded-xl shadow-sm p-6 bg-[${color}]`;
+"#;
+        let result = transform_source(src.to_string(), None);
+        println!("---- OUTPUT CODE ----\n{}", result.code);
+        println!("---- CLASSES ----\n{:?}", result.classes);
+        println!("---- CHANGED ----\n{:?}", result.changed);
+        // Does output contain a CSS variable reference like var(--Card-...)?
+        let has_css_var = result.code.contains("var(--") || result.classes.iter().any(|c| c.contains("var(--"));
+        println!("---- HAS CSS VAR IN OUTPUT? {} ----", has_css_var);
+    }
+
+    #[test]
+    fn probe_dynamic_object_config() {
+        let src = r#"
+const Button = tw.button({
+  base: `px-4 py-2 rounded-lg font-medium bg-[${bg}] text-[${textColor}]`,
+});
+"#;
+        let result = transform_source(src.to_string(), None);
+        println!("---- OUTPUT CODE (object) ----\n{}", result.code);
+        println!("---- CLASSES (object) ----\n{:?}", result.classes);
+        let has_css_var = result.code.contains("var(--");
+        println!("---- HAS CSS VAR IN OBJECT OUTPUT? {} ----", has_css_var);
+    }
+}

@@ -3090,6 +3090,12 @@ export interface TransformResult {
   changed: boolean
   rscJson?: string
   metadataJson?: string
+  /**
+   * Mode 2: CSS rules generated for `${...}` (arbitrary-value dynamic) tokens,
+   * e.g. `.tw-Card-color { background-color: var(--Card-color, transparent); }`.
+   * None if no dynamic tokens were found in this file.
+   */
+  dynamicCssJson?: string
 }
 
 export declare function transformSource(source: string, opts?: Record<string, string> | undefined | null): TransformResult

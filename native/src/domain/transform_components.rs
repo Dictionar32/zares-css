@@ -86,9 +86,29 @@ pub(crate) fn parse_subcomponent_blocks(
 // Component code generators
 // ─────────────────────────────────────────────────────────────────────────────
 
-pub(crate) fn render_static_component(tag: &str, classes: &str, fn_name: &str, with_sub: bool) -> String {
+/// `dynamic_props`: `(source_prop_name, css_var_name)` pairs collected while
+/// resolving `${...}` tokens (see `transform::resolve_dynamic_classes`).
+/// When non-empty, the generated component destructures those prop names and
+/// sets them as CSS custom properties on the root element's `style` — merged
+/// with any `style` the caller already passed in. CSS custom properties
+/// inherit down the DOM tree, so a value set here also reaches sub-components
+/// rendered as descendants (see README §3.5 "Approach 3").
+pub(crate) fn render_static_component(
+    tag: &str,
+    classes: &str,
+    fn_name: &str,
+    with_sub: bool,
+    dynamic_props: &[(String, String)],
+) -> String {
+    let dyn_style_line = dynamic_style_assign_line(dynamic_props);
+    let delete_dyn_props = delete_dynamic_props_line(dynamic_props);
+    let style_field = if dynamic_props.is_empty() {
+        String::new()
+    } else {
+        ", style: _st".to_string()
+    };
     let base = format!(
-        "React.forwardRef(function {fn_name}(props, ref) {{\n  var _c = props.className;\n  var _r = Object.assign({{}}, props);\n  delete _r.className;\n  return React.createElement(\"{tag}\", Object.assign({{ ref }}, _r, {{ className: [{classes_json}, _c].filter(Boolean).join(\" \") }}));\n}})",
+        "React.forwardRef(function {fn_name}(props, ref) {{\n  var _c = props.className;\n{dyn_style_line}  var _r = Object.assign({{}}, props);\n  delete _r.className;{delete_dyn_props}\n  return React.createElement(\"{tag}\", Object.assign({{ ref }}, _r, {{ className: [{classes_json}, _c].filter(Boolean).join(\" \"){style_field} }}));\n}})",
         fn_name = fn_name,
         tag = tag,
         classes_json = serde_json_string(classes),
@@ -106,6 +126,44 @@ pub(crate) fn render_static_component(tag: &str, classes: &str, fn_name: &str, w
     }
 }
 
+/// Emit `var _ds = { "--Card-bg": props.bg, ... }; var _st = Object.assign({}, props.style, _ds);`
+/// React omits `undefined`/`null` entries when applying a style object, so
+/// props the caller didn't pass simply fall through to the CSS `var(..., fallback)`.
+pub(crate) fn dynamic_style_assign_line(dynamic_props: &[(String, String)]) -> String {
+    if dynamic_props.is_empty() {
+        return String::new();
+    }
+    let entries = dynamic_props
+        .iter()
+        .map(|(source, var_name)| format!("{}: props.{}", serde_json_string(var_name), source))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "  var _ds = {{ {entries} }};\n  var _st = Object.assign({{}}, props.style, _ds);\n",
+        entries = entries
+    )
+}
+
+/// Emit ` delete _r.style; delete _r.bg; delete _r.color;` etc, so dynamic prop
+/// names don't leak onto the underlying DOM element as unknown attributes.
+pub(crate) fn delete_dynamic_props_line(dynamic_props: &[(String, String)]) -> String {
+    if dynamic_props.is_empty() {
+        return String::new();
+    }
+    let mut seen = std::collections::HashSet::new();
+    let mut out = String::from(" delete _r.style;");
+    for (source, _) in dynamic_props {
+        if seen.insert(source.clone()) {
+            out.push_str(&format!(" delete _r.{};", source));
+        }
+    }
+    out
+}
+
+/// `dynamic_props`: applied to the root (`base`) element only — sub-components
+/// are rendered as DOM descendants when nested in JSX (`<Card><Card.header/></Card>`),
+/// so CSS custom property inheritance carries the value down without needing
+/// each sub-component to also destructure it. See `render_static_component`.
 pub(crate) fn render_compound_component(
     tag: &str,
     base_classes: &str,
@@ -113,9 +171,17 @@ pub(crate) fn render_compound_component(
     sub_components: &[SubComponent],
     component_name: &str,
     with_sub: bool,
+    dynamic_props: &[(String, String)],
 ) -> String {
+    let dyn_style_line = dynamic_style_assign_line(dynamic_props);
+    let delete_dyn_props = delete_dynamic_props_line(dynamic_props);
+    let style_field = if dynamic_props.is_empty() {
+        String::new()
+    } else {
+        ", style: _st".to_string()
+    };
     let base = format!(
-        "React.forwardRef(function {fn_name}(props, ref) {{\n  var _c = props.className;\n  var _r = Object.assign({{}}, props);\n  delete _r.className;\n  return React.createElement(\"{tag}\", Object.assign({{ ref }}, _r, {{ className: [{base_json}, _c].filter(Boolean).join(\" \") }}));\n}})",
+        "React.forwardRef(function {fn_name}(props, ref) {{\n  var _c = props.className;\n{dyn_style_line}  var _r = Object.assign({{}}, props);\n  delete _r.className;{delete_dyn_props}\n  return React.createElement(\"{tag}\", Object.assign({{ ref }}, _r, {{ className: [{base_json}, _c].filter(Boolean).join(\" \"){style_field} }}));\n}})",
         fn_name = fn_name,
         tag = tag,
         base_json = serde_json_string(base_classes),

@@ -357,6 +357,22 @@ export const runLoaderTransform = (ctx: { filepath: string; source: string; opti
     const containerCss = extractContainerCssFromSource(source)
     if (containerCss) cssChunks.push(containerCss)
 
+    // Mode 2: `${...}` dynamic tokens (bg-[${color}], text-[${x}], etc.) are
+    // compiled by the Rust engine into CSS Variable rules — these are already
+    // valid, complete CSS (not Tailwind utility names), so they're appended
+    // as-is, same as stateRules/containerCss above, rather than run back
+    // through the Tailwind class generator.
+    if (result?.dynamicCssJson) {
+      try {
+        const dynamicRules = JSON.parse(result.dynamicCssJson) as string[]
+        if (Array.isArray(dynamicRules) && dynamicRules.length > 0) {
+          cssChunks.push(dynamicRules.join("\n"))
+        }
+      } catch (err) {
+        console.debug("Mode 2 dynamic CSS parse warning:", err)
+      }
+    }
+
     const combined = cssChunks.join("\n").trim()
     if (combined) staticCss = combined
   } catch (err) {

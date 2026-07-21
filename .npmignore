@@ -7,6 +7,7 @@ docs/
 examples/
 plans/
 scripts/
+dif/
 
 test/
 # Exclude Rust source & build artifacts, keep binary

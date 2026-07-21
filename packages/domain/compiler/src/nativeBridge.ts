@@ -458,6 +458,10 @@ export interface NativeTransformResult {
   changed: boolean
   rscJson?: string
   metadataJson?: string
+  /** Mode 2: generated `.tw-Comp-prop { prop: var(--Comp-prop, fallback); }`
+   *  rules for `${...}` (arbitrary-value dynamic) tokens, JSON-encoded array
+   *  of strings. Undefined/absent if the file had no dynamic tokens. */
+  dynamicCssJson?: string
 }
 
 export interface ClassExtractResult {
@@ -588,6 +592,7 @@ export const adaptNativeResult = (
   changed: boolean
   rsc?: NativeRscResult
   metadata?: ComponentMetadata[]
+  dynamicCss?: string[]
 } => {
   return {
     code: raw.code ?? "",
@@ -595,6 +600,7 @@ export const adaptNativeResult = (
     changed: raw.changed ?? false,
     rsc: raw.rscJson ? JSON.parse(raw.rscJson) : undefined,
     metadata: raw.metadataJson ? JSON.parse(raw.metadataJson) : undefined,
+    dynamicCss: raw.dynamicCssJson ? JSON.parse(raw.dynamicCssJson) : undefined,
   }
 }
 
