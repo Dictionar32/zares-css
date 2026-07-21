@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TwCssInjector } from "tailwind-styled-v4/runtime-css";
@@ -44,6 +45,11 @@ export default function RootLayout({
          * Server Component async — harus import dari runtime-css (server-safe entry).
          */}
         <TwCssInjector />
+        <Script
+          src="https://context7.com/widget.js"
+          data-library="/dictionar32/zares-css"
+          strategy="afterInteractive"
+        />
       </head>
       <RootBody>
         <ThemeProvider>
