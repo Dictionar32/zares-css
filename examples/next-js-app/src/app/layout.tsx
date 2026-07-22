@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { TwCssInjector } from "tailwind-styled-v4/runtime-css";
+import { TwCssInjector } from "zares-css/runtime-css";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { tw } from "tailwind-styled-v4";
+import { tw } from "zares-css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

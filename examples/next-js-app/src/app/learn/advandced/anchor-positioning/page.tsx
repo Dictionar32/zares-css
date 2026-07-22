@@ -394,7 +394,7 @@ export default function AnchorPositioningPage() {
         `}</Code>
             <Code file="anchor-tw.tsx">{`
 /* React component menggunakan CSS anchor positioning */
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 const TriggerBtn = tw.button({
   base: "px-3 py-1.5 rounded-lg text-sm bg-indigo-500 text-white [anchor-name:--tooltip-anchor]",
@@ -426,7 +426,7 @@ export function TooltipExample() {
           <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
             <H2>Anchor Positioning di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
             <Code file="anchor-tw-full.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 /* Daftarkan anchor via arbitrary CSS property */
 const MenuButton = tw.button({

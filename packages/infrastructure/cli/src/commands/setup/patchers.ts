@@ -5,7 +5,7 @@ export function patchNextConfigImpl(src: string): string | null {
   const hasCjs = src.includes("module.exports")
 
   if (hasExport) {
-    const withImport = `import { withTailwindStyled } from "tailwind-styled-v4/next"\n${src}`
+    const withImport = `import { withTailwindStyled } from "zares-css/next"\n${src}`
 
     const patterns = [
       /export default\s+([\w]+);?\s*$/m,
@@ -40,7 +40,7 @@ export function patchViteConfigImpl(src: string): string | null {
 
   const patched = hasLegacyImport
     ? src
-        .replace(/from\s+['"]tailwind-styled-v4\/vite['"]/g, 'from "tailwind-styled-v4/vite"')
+        .replace(/from\s+['"]tailwind-styled-v4\/vite['"]/g, 'from "zares-css/vite"')
         .replace(/\btailwindStyled\(/g, "tailwindStyledPlugin(")
     : src.replace(/\btailwindStyled\(/g, "tailwindStyledPlugin(")
 
@@ -56,11 +56,11 @@ export function patchViteConfigImpl(src: string): string | null {
     if (!patched.includes("tailwind-styled-v4/vite") && insertAfter) {
       return patched.replace(
         insertAfter,
-        `${insertAfter}import { tailwindStyledPlugin } from "tailwind-styled-v4/vite"\n`
+        `${insertAfter}import { tailwindStyledPlugin } from "zares-css/vite"\n`
       )
     }
     if (!patched.includes("tailwind-styled-v4/vite")) {
-      return `import { tailwindStyledPlugin } from "tailwind-styled-v4/vite"\n${patched}`
+      return `import { tailwindStyledPlugin } from "zares-css/vite"\n${patched}`
     }
     return patched
   })()
@@ -73,7 +73,7 @@ export function patchRspackConfigImpl(src: string): string | null {
   const hasLegacyImport = src.includes("tailwind-styled-v4/rspack")
 
   const withLegacyFix = hasLegacyImport
-    ? src.replace(/from\s+['"]tailwind-styled-v4\/rspack['"]/g, 'from "tailwind-styled-v4/rspack"')
+    ? src.replace(/from\s+['"]tailwind-styled-v4\/rspack['"]/g, 'from "zares-css/rspack"')
     : src
 
   const patched = withLegacyFix.replace(/\btailwindStyled\(/g, "tailwindStyledRspackPlugin(")
@@ -91,7 +91,7 @@ export function patchRspackConfigImpl(src: string): string | null {
       lines.splice(
         lastImportIdx + 1,
         0,
-        'import { tailwindStyledRspackPlugin } from "tailwind-styled-v4/rspack"'
+        'import { tailwindStyledRspackPlugin } from "zares-css/rspack"'
       )
       return lines.join("\n")
     }

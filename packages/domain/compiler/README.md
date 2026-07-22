@@ -25,7 +25,7 @@ If you're using this in a project that bundles the native module, ensure it's pr
 import { transformSource, compileCssFromClasses } from "@tailwind-styled/compiler"
 
 const source = `
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 const Button = tw.button\`
   bg-blue-500 hover:bg-blue-600

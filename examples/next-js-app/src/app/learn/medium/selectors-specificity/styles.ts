@@ -1,4 +1,4 @@
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 export const Page = tw.div({ base: "min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans", attrs: { "data-learn-page": "" } })
 export const TopBar = tw.nav({

@@ -563,7 +563,7 @@ progress               { accent-color: #f59e0b; }
                     <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
                         <H2>Colors & Gradients di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
                         <Code file="colors-tw.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 /* Gradient backgrounds via Tailwind utilities */
 const HeroBg = tw.div({

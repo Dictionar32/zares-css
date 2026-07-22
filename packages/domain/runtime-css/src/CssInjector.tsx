@@ -12,7 +12,7 @@
  *
  * Usage:
  *   // app/layout.tsx
- *   import { TwCssInjector } from "tailwind-styled-v4/runtime-css"
+ *   import { TwCssInjector } from "zares-css/runtime-css"
  *
  *   export default function Layout({ children }) {
  *     return (

@@ -8,7 +8,7 @@
  * This is the real-world pattern used in box-model/page.tsx
  */
 
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 import assert from "assert"
 
 console.log("Testing object config with nested sub-component variants...\n")

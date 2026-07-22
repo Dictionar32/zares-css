@@ -55,7 +55,7 @@ mod tests {
 
     #[test]
     fn imports() {
-        let r = extract_classes_oxc(r#"import { tw } from "tailwind-styled-v4""#, "x.ts");
+        let r = extract_classes_oxc(r#"import { tw } from "zares-css""#, "x.ts");
         assert!(r.imports.contains(&"tailwind-styled-v4".to_string()));
     }
 

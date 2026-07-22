@@ -5,7 +5,7 @@
  * Bisa dipakai langsung atau dijadikan template buat community plugins.
  *
  * Usage:
- *   import { pluginAnimation, pluginTokens, pluginTypography } from "tailwind-styled-v4/plugins"
+ *   import { pluginAnimation, pluginTokens, pluginTypography } from "zares-css/plugins"
  *
  *   withTailwindStyled({
  *     plugins: [
@@ -16,7 +16,7 @@
  *   })(nextConfig)
  *
  * Atau standalone:
- *   import { use } from "tailwind-styled-v4/plugin"
+ *   import { use } from "zares-css/plugin"
  *   use(pluginAnimation())
  */
 

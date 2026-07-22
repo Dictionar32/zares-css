@@ -144,7 +144,7 @@ async function createNextApp(context: CreateContext): Promise<void> {
     context,
     "next.config.ts",
     `import type { NextConfig } from "next"
-import { withTailwindStyled } from "tailwind-styled-v4/next"
+import { withTailwindStyled } from "zares-css/next"
 
 const nextConfig: NextConfig = {}
 export default withTailwindStyled()(nextConfig)
@@ -166,7 +166,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   await writeProjectFile(
     context,
     "src/app/page.tsx",
-    `import { tw } from "tailwind-styled-v4"
+    `import { tw } from "zares-css"
 
 const Page = tw.main\`min-h-screen grid place-items-center bg-zinc-950 text-white\`
 
@@ -206,7 +206,7 @@ async function createViteReactApp(context: CreateContext): Promise<void> {
     "vite.config.ts",
     `import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
-import { tailwindStyledPlugin } from "tailwind-styled-v4/vite"
+import { tailwindStyledPlugin } from "zares-css/vite"
 
 export default defineConfig({ plugins: [react(), tailwindStyledPlugin()] })
 `
@@ -264,7 +264,7 @@ export default defineConfig({
     context,
     "src/main.ts",
     `import { createApp } from "vue"
-import { TailwindStyledPlugin } from "tailwind-styled-v4/vue"
+import { TailwindStyledPlugin } from "zares-css/vue"
 import App from "./App.vue"
 import "./style.css"
 
@@ -277,7 +277,7 @@ createApp(App).use(TailwindStyledPlugin).mount("#app")
     "src/App.vue",
     `<script setup lang="ts">
 import { ref } from "vue"
-import { tw } from "tailwind-styled-v4/vue"
+import { tw } from "zares-css/vue"
 
 const Button = tw("button", {
   base: "px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2",
@@ -376,7 +376,7 @@ export default app
     context,
     "src/App.svelte",
     `<script lang="ts">
-  import { cv } from "tailwind-styled-v4/svelte"
+  import { cv } from "zares-css/svelte"
 
   const button = cv({
     base: "px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none",

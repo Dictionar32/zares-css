@@ -5,7 +5,7 @@
 "use client"
 
 import { useState } from "react"
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // ─── Shell ───────────────────────────────────────────────────────────────────
 
@@ -1318,7 +1318,7 @@ align-content     /* distribusi baris (saat flex-wrap: wrap) */
                             ))}
                         </div>
                         <Code file="centering.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Perfect center — horizontal + vertical
 const Center = tw.div({ base: "flex items-center justify-center" })
@@ -1678,7 +1678,7 @@ const RegularItem = tw.div({ base: "flex-1" })
                     <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
                         <H2>Flexbox di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
                         <Code file="flex-components.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Stack vertikal
 const VStack = tw.div({

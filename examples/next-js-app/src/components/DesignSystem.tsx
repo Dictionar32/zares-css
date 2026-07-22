@@ -6,7 +6,7 @@
  * Token di-inject sebagai CSS custom properties --sys-{group}-{name}.
  */
 import React from "react"
-import { createStyledSystem } from "tailwind-styled-v4"
+import { createStyledSystem } from "zares-css"
 
 // -- Buat design system dengan token -------------------------------------------
 export const ui = createStyledSystem({

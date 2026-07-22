@@ -29,7 +29,7 @@ static RE_INTERACTIVE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"\b(hover:|focus:|active:|group-hover:|peer-|on[A-Z]|useState|useEffect|useRef)\b")
         .unwrap()
 });
-// Captures the brace contents of `import { ... } from "tailwind-styled-v4"`
+// Captures the brace contents of `import { ... } from "zares-css"`
 // so STEP 4 (below) can check each named specifier individually instead of
 // an all-or-nothing `tw`-only check.
 static RE_IMPORT_LINE: Lazy<Regex> = Lazy::new(|| {
@@ -1474,7 +1474,7 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
         code = format!("import React from \"react\";\n{}", code);
     }
 
-    // STEP 4: Strip named imports from "tailwind-styled-v4" that are no longer
+    // STEP 4: Strip named imports from "zares-css" that are no longer
     // referenced anywhere in the transformed code.
     //
     // BUG (fixed here): the old logic only checked whether any `tw.xxx(`/

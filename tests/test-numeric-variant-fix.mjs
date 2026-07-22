@@ -7,7 +7,7 @@
  */
 
 import assert from "assert"
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Test 1: Numeric variant keys should infer to number type
 const Alert = tw.div({

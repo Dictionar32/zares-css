@@ -121,7 +121,7 @@ import { withTailwindStyled } from "@tailwind-styled/next"
 export default withTailwindStyled()(nextConfig)
 
 // Usage Pattern: Template literal + Object config hybrid
-import { tw, cv } from "tailwind-styled-v4"
+import { tw, cv } from "zares-css"
 
 // Template literal (compiled away at build time)
 const Heading = tw.h1`text-3xl font-extrabold text-gray-900`
@@ -616,11 +616,11 @@ setToken("--color-primary", "#ff0000")
 
 ```typescript
 // From root package
-export { tw, cv, styled, extend, cx } from "tailwind-styled-v4"
-export { parseTailwindClasses } from "tailwind-styled-v4"
-export { extractThemeFromCSS } from "tailwind-styled-v4"
-export { withTailwindStyled } from "tailwind-styled-v4/next"
-export { tailwindStyledPlugin } from "tailwind-styled-v4/vite"
+export { tw, cv, styled, extend, cx } from "zares-css"
+export { parseTailwindClasses } from "zares-css"
+export { extractThemeFromCSS } from "zares-css"
+export { withTailwindStyled } from "zares-css/next"
+export { tailwindStyledPlugin } from "zares-css/vite"
 ```
 
 ### Adapter-Specific Exports

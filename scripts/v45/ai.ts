@@ -25,7 +25,7 @@ if (!input) {
 
 const SYSTEM_PROMPT = `You are an expert at tailwind-styled-v4. Generate a single production-quality React component.
 Rules: use tw.tagname({ base, variants, defaultVariants }) syntax. Real Tailwind v4 classes. 2-3 variants. Export default.
-Output ONLY TypeScript code starting with: import { tw } from "tailwind-styled-v4"`
+Output ONLY TypeScript code starting with: import { tw } from "zares-css"`
 
 // ─── Provider: Anthropic ──────────────────────────────────────────────────────
 async function generateWithAnthropic(prompt) {
@@ -92,9 +92,9 @@ function generateStatic(prompt) {
   const isCard = /card|panel|box/.test(prompt.toLowerCase())
   const isNav  = /nav|link|menu|tab/.test(prompt.toLowerCase())
 
-  if (isCard) return `import { tw } from "tailwind-styled-v4"\n\nconst ${cn} = tw.div({\n  base: "rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden",\n  variants: {\n    padding: { none: "", sm: "p-4", md: "p-6", lg: "p-8" },\n    shadow: { none: "shadow-none", sm: "shadow-sm", md: "shadow-md", lg: "shadow-lg" },\n  },\n  defaultVariants: { padding: "md", shadow: "sm" },\n})\n\nexport default ${cn}\n`
-  if (isNav) return `import { tw } from "tailwind-styled-v4"\n\nconst ${cn} = tw.a({\n  base: "inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",\n  variants: {\n    active: {\n      true: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300",\n      false: "text-gray-600 hover:bg-gray-100 hover:text-gray-900",\n    },\n  },\n  defaultVariants: { active: "false" },\n})\n\nexport default ${cn}\n`
-  return `import { tw } from "tailwind-styled-v4"\n\nconst ${cn} = tw.button({\n  base: "inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none",\n  variants: {\n    intent: {\n      primary: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",\n      danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",\n      ghost: "bg-transparent border border-gray-200 hover:bg-gray-50 focus:ring-gray-200",\n    },\n    size: { sm: "h-8 px-3 text-sm rounded", md: "h-10 px-4 text-base rounded-md", lg: "h-12 px-6 text-lg rounded-lg" },\n  },\n  defaultVariants: { intent: "primary", size: "md" },\n})\n\nexport default ${cn}\n`
+  if (isCard) return `import { tw } from "zares-css"\n\nconst ${cn} = tw.div({\n  base: "rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden",\n  variants: {\n    padding: { none: "", sm: "p-4", md: "p-6", lg: "p-8" },\n    shadow: { none: "shadow-none", sm: "shadow-sm", md: "shadow-md", lg: "shadow-lg" },\n  },\n  defaultVariants: { padding: "md", shadow: "sm" },\n})\n\nexport default ${cn}\n`
+  if (isNav) return `import { tw } from "zares-css"\n\nconst ${cn} = tw.a({\n  base: "inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",\n  variants: {\n    active: {\n      true: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300",\n      false: "text-gray-600 hover:bg-gray-100 hover:text-gray-900",\n    },\n  },\n  defaultVariants: { active: "false" },\n})\n\nexport default ${cn}\n`
+  return `import { tw } from "zares-css"\n\nconst ${cn} = tw.button({\n  base: "inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none",\n  variants: {\n    intent: {\n      primary: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",\n      danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",\n      ghost: "bg-transparent border border-gray-200 hover:bg-gray-50 focus:ring-gray-200",\n    },\n    size: { sm: "h-8 px-3 text-sm rounded", md: "h-10 px-4 text-base rounded-md", lg: "h-12 px-6 text-lg rounded-lg" },\n  },\n  defaultVariants: { intent: "primary", size: "md" },\n})\n\nexport default ${cn}\n`
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────

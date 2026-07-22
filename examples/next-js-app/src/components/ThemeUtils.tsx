@@ -3,7 +3,7 @@
  *
  * Helper untuk reference CSS variables sebagai Tailwind arbitrary values.
  */
-import { tw, t, cssVar, twVar, v4Tokens, createTheme } from "tailwind-styled-v4"
+import { tw, t, cssVar, twVar, v4Tokens, createTheme } from "zares-css"
 
 // -- createTheme — typed token map ---------------------------------------------
 const theme = createTheme({

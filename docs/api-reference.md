@@ -5,7 +5,7 @@
 ### `tw` — styled component factory
 
 ```tsx
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 ```
 
 **Template literal:**
@@ -69,7 +69,7 @@ const Nav = tw.server.nav`flex items-center justify-between px-6`
 Standalone function tanpa React — cocok untuk shadcn/ui, Radix, Headless UI.
 
 ```tsx
-import { cv } from "tailwind-styled-v4"
+import { cv } from "zares-css"
 
 const buttonVariants = cv({
   base: "inline-flex items-center justify-center rounded-md text-sm font-medium",
@@ -95,7 +95,7 @@ const buttonVariants = cv({
 
 **InferVariantProps** — TypeScript helper:
 ```tsx
-import type { InferVariantProps } from "tailwind-styled-v4"
+import type { InferVariantProps } from "zares-css"
 type ButtonVariants = InferVariantProps<typeof buttonVariants>
 // { variant?: "default" | "destructive" | "outline", size?: "default" | "sm" | "lg" | "icon" }
 ```
@@ -105,7 +105,7 @@ type ButtonVariants = InferVariantProps<typeof buttonVariants>
 ### `cx()` / `cxm()` — Class Utilities
 
 ```tsx
-import { cx, cxm } from "tailwind-styled-v4"
+import { cx, cxm } from "zares-css"
 
 // cx — simple join, no conflict resolution
 cx("p-4", isActive && "bg-blue-500", undefined, "rounded") // "p-4 bg-blue-500 rounded"
@@ -120,7 +120,7 @@ cxm("p-4 p-2", "bg-red-500 bg-blue-500") // "p-2 bg-blue-500"
 
 ```ts
 // next.config.ts
-import { withTailwindStyled } from "tailwind-styled-v4/next"
+import { withTailwindStyled } from "zares-css/next"
 
 export default withTailwindStyled({
   // Transform mode
@@ -153,7 +153,7 @@ export default withTailwindStyled({
 
 ```ts
 // vite.config.ts
-import { tailwindStyledPlugin } from "tailwind-styled-v4/vite"
+import { tailwindStyledPlugin } from "zares-css/vite"
 
 export default defineConfig({
   plugins: [
@@ -173,7 +173,7 @@ export default defineConfig({
 
 ```ts
 // tailwind.config.ts
-import { defaultPreset } from "tailwind-styled-v4/preset"
+import { defaultPreset } from "zares-css/preset"
 
 export default {
   presets: [defaultPreset],    // includes design tokens + animation
@@ -198,7 +198,7 @@ export default {
 
 ```tsx
 // app/layout.tsx — Server Component
-import { TwCssInjector } from "tailwind-styled-v4/css"
+import { TwCssInjector } from "zares-css/css"
 
 export default function Layout({ children }) {
   return (
@@ -228,5 +228,5 @@ import {
   loadTailwindConfig,  // load tw config with fallback
   isZeroConfig,        // check if project has no config
   bootstrapZeroConfig, // auto-generate config files
-} from "tailwind-styled-v4/compiler"
+} from "zares-css/compiler"
 ```

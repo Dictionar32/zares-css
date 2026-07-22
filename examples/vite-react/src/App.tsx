@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 const Heading = tw.h1`
   text-3xl font-extrabold tracking-tight
@@ -118,7 +118,7 @@ const features = [
 ]
 
 const exampleSnippet = [
-  'import { tw } from "tailwind-styled-v4"',
+  'import { tw } from "zares-css"',
   "",
   "const Button = tw" + '.button({',
   '  base: "rounded-lg px-4 py-2 font-medium transition",',

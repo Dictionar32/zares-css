@@ -515,7 +515,7 @@ img {
           <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
             <H2>Visual Effects di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
             <Code file="effects-tw.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 /* Glassmorphism card */
 const GlassCard = tw.div({

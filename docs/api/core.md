@@ -7,7 +7,7 @@ The `tailwind-styled-v4` root package provides the primary styled component API.
 Create styled components with Tailwind classes.
 
 ```typescript
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Tagged template literal — for simple static classes
 const Button = tw.button`px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700`
@@ -40,7 +40,7 @@ const Card = tw.div({
 Framework-agnostic class resolver. Returns a function that accepts props and returns a class string.
 
 ```typescript
-import { cv } from "tailwind-styled-v4"
+import { cv } from "zares-css"
 
 const buttonCv = cv({
   base: "px-4 py-2 rounded font-medium",
@@ -71,7 +71,7 @@ const cls = buttonCv({ intent: "danger", size: "lg" })
 Simple class concatenation with falsy filtering.
 
 ```typescript
-import { cx } from "tailwind-styled-v4"
+import { cx } from "zares-css"
 
 const cls = cx(
   "flex items-center",
@@ -88,7 +88,7 @@ const cls = cx(
 Like `cx()` but uses native Rust engine to resolve conflicting Tailwind classes.
 
 ```typescript
-import { cxm } from "tailwind-styled-v4"
+import { cxm } from "zares-css"
 
 // px-4 is overridden by px-8
 const cls = cxm("px-4 py-2 rounded", "px-8")
@@ -102,7 +102,7 @@ const cls = cxm("px-4 py-2 rounded", "px-8")
 For React Server Components, use `tw.server.*` to generate static classes that are safe for SSR.
 
 ```typescript
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // RSC-safe — no client-side JS
 const ServerCard = tw.server.div`bg-white rounded-lg shadow p-6`
@@ -148,7 +148,7 @@ const LoadingButton = Button.withVariants({
 Dynamic design token system for runtime theme switching.
 
 ```typescript
-import { liveToken, setToken, getToken, tokenRef, tokenVar } from "tailwind-styled-v4"
+import { liveToken, setToken, getToken, tokenRef, tokenVar } from "zares-css"
 
 // Register tokens
 const tokens = liveToken({
@@ -168,7 +168,7 @@ const cssVar = tokenRef("primary")  // → "var(--primary)"
 ## Container Query API
 
 ```typescript
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 const ResponsiveCard = tw.div({
   base: "bg-white rounded-lg p-4",

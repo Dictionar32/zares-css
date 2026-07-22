@@ -8,7 +8,7 @@
 "use client"
 
 import { useState } from "react"
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 import {
   RelativeContainer
 } from "../shared-styles"
@@ -1524,7 +1524,7 @@ const Container = tw.div({ base: "overflow-clip" })  // clip tapi bukan scroll c
             <IsolationStackingPlayground />
 
             <Code file="isolation.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // ❌ Cara lama — pakai opacity sebagai "hack" isolasi z-index
 const ModalWrapper = tw.div({ base: "opacity-[0.999]" }) // side effect: bikin semi-transparent?!
@@ -1816,7 +1816,7 @@ const Dialog = tw.div({
             </H2>
 
             <Code file="components.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Card dengan badge — relative + absolute pattern
 const ProductCard = tw.article({

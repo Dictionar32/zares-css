@@ -8,7 +8,7 @@
 "use client"
 
 import { useState } from "react"
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shell
@@ -2146,7 +2146,7 @@ img {
             </H2>
 
             <Code file="components.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Badge — inline-block, mengalir bersama teks
 const Badge = tw.span({

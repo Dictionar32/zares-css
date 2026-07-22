@@ -33,7 +33,7 @@ export default {
 
 ```ts
 // next.config.ts
-import { withTailwindStyled } from "tailwind-styled-v4/next"
+import { withTailwindStyled } from "zares-css/next"
 
 export default withTailwindStyled({
   routeCss: true,           // CSS splitting per route (production)

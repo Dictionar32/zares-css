@@ -72,7 +72,7 @@ describe("Pipeline smoke: compiler", () => {
   it("transformSource handles basic input", () => {
     if (!compilerMod?.transformSource) return
     const source = `
-      import { tw } from "tailwind-styled-v4"
+      import { tw } from "zares-css"
       const Btn = tw.button\`px-4 py-2 rounded\`
     `
     try {

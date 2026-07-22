@@ -4,7 +4,7 @@
  * tw.div({ container }) — generates @container rules via Rust.
  * Layout berubah berdasarkan lebar container parent, bukan viewport.
  */
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Wrapper dengan @container context
 export const ContainerWrapper = tw.div({ base: "@container w-full" })

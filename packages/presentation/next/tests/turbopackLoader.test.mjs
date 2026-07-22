@@ -61,7 +61,7 @@ describe("turbopackLoader()", () => {
 
   it("skips node_modules", () => {
     if (!turbopackLoader) return
-    const source = `import { tw } from "tailwind-styled-v4"; const B = tw.button\`px-4\``
+    const source = `import { tw } from "zares-css"; const B = tw.button\`px-4\``
     const ctx = { resourcePath: "/project/node_modules/some-pkg/index.tsx" }
     try {
       const result = turbopackLoader.call(ctx, source, {})
@@ -75,7 +75,7 @@ describe("turbopackLoader()", () => {
 
   it("preserves use client directive", () => {
     if (!turbopackLoader) return
-    const source = `"use client"\nimport { tw } from "tailwind-styled-v4"\nconst B = tw.div\`flex\``
+    const source = `"use client"\nimport { tw } from "zares-css"\nconst B = tw.div\`flex\``
     const ctx = { resourcePath: "/project/src/app/client.tsx" }
     try {
       const result = turbopackLoader.call(ctx, source, {})

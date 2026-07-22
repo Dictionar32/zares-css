@@ -475,7 +475,7 @@ body {
           <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
             <H2>CSS Performance di tw<H2.anchor href="#tw-usage">#</H2.anchor></H2>
             <Code file="perf-tw.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Animasi GPU-only — hanya transform/opacity
 const FadeIn = tw.div({

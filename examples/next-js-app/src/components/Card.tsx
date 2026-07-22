@@ -1,5 +1,5 @@
 import React from "react"
-import { tw, cn } from "tailwind-styled-v4"
+import { tw, cn } from "zares-css"
 
 /**
  * Card — object config API

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Styled components untuk scanner dashboard
 const PageContainer = tw.div({

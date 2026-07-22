@@ -174,7 +174,7 @@ function getGroupPrefix(group: string): string {
  * Works out of the box with next-app-standar-config globals.css.
  *
  * @example
- * import { v4Tokens } from "tailwind-styled-v4"
+ * import { v4Tokens } from "zares-css"
  *
  * const Page = tw.div`${v4Tokens.bg} ${v4Tokens.text}`
  * // → tw.div`bg-[var(--color-background)] text-[var(--color-foreground)]`

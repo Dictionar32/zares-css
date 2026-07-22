@@ -619,7 +619,7 @@ h1 {
                     <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
                         <H2>Typography di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
                         <Code file="typography-tw.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 /* Heading dengan fluid size via arbitrary value */
 const Heading = tw.h2({

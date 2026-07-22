@@ -1,4 +1,4 @@
-import { withTailwindStyled } from "tailwind-styled-v4/next"
+import { withTailwindStyled } from "zares-css/next"
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {}

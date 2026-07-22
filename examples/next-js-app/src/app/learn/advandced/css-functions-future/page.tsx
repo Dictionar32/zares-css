@@ -545,7 +545,7 @@ input[type="text"] {
           <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
             <H2>CSS Functions Terbaru di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
             <Code file="tw-future.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 /* light-dark() di arbitrary values */
 const ThemedCard = tw.div({

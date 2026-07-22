@@ -520,7 +520,7 @@ The Tailwind CSS v4 compiler Rust engine handles the heavy lifting:
   `Generating static pages (5/5)` for all routes including `/_not-found`.
 - **Known limitations:**
   - **Breaking change to the public API surface.** Any consumer currently doing
-    `import { liveToken } from "tailwind-styled-v4"` (or `tokenVar` / `createUseTokens` /
+    `import { liveToken } from "zares-css"` (or `tokenVar` / `createUseTokens` /
     `applyTokenSet` / `getToken` / `getTokens` / `setToken` / `setTokens` / `subscribeTokens` /
     `tokenRef` / `containerRef` / `generateTokenCssString` from the main entry) will get a type
     error / missing export and must switch to `"tailwind-styled-v4/runtime"`. Only one such

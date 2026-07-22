@@ -64,9 +64,9 @@ export function generateComponentCode(opts: ComponentCodegenOptions): string {
 
   // Imports
   if (framework === "react") {
-    lines.push(`import { tw } from "tailwind-styled-v4"`)
+    lines.push(`import { tw } from "zares-css"`)
     if (withTypes && variantKeys.length > 0) {
-      lines.push(`import type { InferVariantProps } from "tailwind-styled-v4"`)
+      lines.push(`import type { InferVariantProps } from "zares-css"`)
     }
   } else if (framework === "vue") {
     lines.push(`import { tw } from "@tailwind-styled/vue"`)
@@ -139,7 +139,7 @@ export function generateStorybookStory(opts: ComponentCodegenOptions): string {
 
   lines.push(`import type { Meta, StoryObj } from "@storybook/react"`)
   lines.push(`import { ${name} } from "./${name}"`)
-  lines.push(`import { generateArgTypes, generateDefaultArgs } from "tailwind-styled-v4"`)
+  lines.push(`import { generateArgTypes, generateDefaultArgs } from "zares-css"`)
   lines.push(``)
   lines.push(`const config = {`)
   if (Object.keys(variants).length > 0) {

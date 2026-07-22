@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { tw } from "tailwind-styled-v4";
+import { tw } from "zares-css";
 import { useTheme, getNextTheme } from "@/hooks/useTheme";
 
 /**

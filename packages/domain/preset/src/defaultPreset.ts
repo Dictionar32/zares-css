@@ -13,7 +13,7 @@
  *
  * Override per-project:
  *   // tailwind.config.ts
- *   import { defaultPreset } from "tailwind-styled-v4/preset"
+ *   import { defaultPreset } from "zares-css/preset"
  *   export default { presets: [defaultPreset], theme: { extend: {...} } }
  */
 
@@ -459,7 +459,7 @@ export function generateTailwindConfig(
   contentPaths = STANDARD_CONTENT_PATHS
 ): string {
   return `import type { Config } from "tailwindcss"
-import { defaultPreset } from "tailwind-styled-v4/preset"
+import { defaultPreset } from "zares-css/preset"
 
 // Auto-generated safelist dari tailwind-styled-v4 compiler
 const safelist = (() => {

@@ -615,7 +615,7 @@ export const ConditionalButton = (props: ButtonLinkProps) => {
           <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
             <H2>Accessibility di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
             <Code file="a11y-tw.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // ✅ sr-only built-in Tailwind
 const SrOnly = tw.span({ base: "sr-only" })  // Tailwind punya .sr-only

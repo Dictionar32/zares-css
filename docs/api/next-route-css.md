@@ -10,7 +10,7 @@ menyediakan helper untuk inject `<link>` tags per route.
 Aktifkan di `next.config.ts`:
 
 ```ts
-import { withTailwindStyled } from "tailwind-styled-v4/next"
+import { withTailwindStyled } from "zares-css/next"
 
 export default withTailwindStyled({ routeCss: true })(nextConfig)
 // → Setelah build, manifest ditulis ke .next/static/css/tw/css-manifest.json
@@ -22,7 +22,7 @@ Mengembalikan array link descriptor untuk route tertentu.
 
 ```tsx
 // app/layout.tsx
-import { getRouteCssLinks } from "tailwind-styled-v4/next/route-css"
+import { getRouteCssLinks } from "zares-css/next/route-css"
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const homeLinks = getRouteCssLinks("/")
@@ -44,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 Inject `<link>` tags ke dalam HTML string (untuk edge middleware / custom SSR).
 
 ```ts
-import { injectRouteCssIntoHtml } from "tailwind-styled-v4/next/route-css"
+import { injectRouteCssIntoHtml } from "zares-css/next/route-css"
 
 const enrichedHtml = injectRouteCssIntoHtml(rawHtml, "/dashboard")
 // Inserts <link rel="stylesheet" ...> before </head>
@@ -55,7 +55,7 @@ const enrichedHtml = injectRouteCssIntoHtml(rawHtml, "/dashboard")
 Load manifest secara manual (cached setelah pertama kali).
 
 ```ts
-import { loadRouteCssManifest, invalidateRouteCssManifest } from "tailwind-styled-v4/next/route-css"
+import { loadRouteCssManifest, invalidateRouteCssManifest } from "zares-css/next/route-css"
 
 const manifest = loadRouteCssManifest()
 // { "/": "artifacts/route-css/index.css", "__global": "artifacts/route-css/_global.css" }

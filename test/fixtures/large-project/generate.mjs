@@ -60,7 +60,7 @@ function generateComponent(index) {
   const classes = pickClasses(Math.floor(Math.random() * 6) + 3)
   const variantClasses = pickClasses(Math.floor(Math.random() * 4) + 2)
 
-  return `import { tw } from "tailwind-styled-v4"
+  return `import { tw } from "zares-css"
 
 export const ${name} = tw.div({
   base: "${classes.join(" ")}",

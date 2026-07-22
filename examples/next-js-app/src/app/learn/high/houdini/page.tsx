@@ -440,7 +440,7 @@ if (houdini.paintWorklet) {
           <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
             <H2>Houdini di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
             <Code file="houdini-tw.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // @property tipe custom property — bisa dianimasikan
 // (definisikan di globals.css)

@@ -59,7 +59,7 @@ function bench(name, fn, rounds = ROUNDS) {
 // ── Test data ─────────────────────────────────────────────────────────────────
 const SAMPLE_SOURCE = [
   '"use client"',
-  'import { tw } from "tailwind-styled-v4"',
+  'import { tw } from "zares-css"',
   'const Button = tw.button`bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-300 transition-colors duration-200`',
   'const Card = tw.div({ base: "rounded-xl shadow-lg p-6 bg-white border border-gray-100", variants: { size: { sm: "p-4 text-sm", lg: "p-8 text-lg" } } })',
   'const Nav = tw.nav`sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-gray-200`',

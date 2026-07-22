@@ -46,7 +46,7 @@ Gunakan backticks untuk mendefinisikan class Tailwind secara langsung.
 **Contoh (dari `vite/src/App.tsx`):**
 
 ```tsx
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Komponen dasar dengan template literal
 const Badge = tw.span`
@@ -79,7 +79,7 @@ Definisikan komponen dengan konfigurasi objek yang mendukung variants dan defaul
 **Contoh (dari `vite/src/App.tsx`):**
 
 ```tsx
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 const Button = tw.button({
   base: "inline-flex items-center gap-2 rounded-lg px-4 py-2 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2",
@@ -117,7 +117,7 @@ Fungsi `cv()` (class variant) adalah alternative untuk `tw()` dengan syntax yang
 **Contoh (dari `standar-config-next-js-app/src/components/Button.tsx`):**
 
 ```tsx
-import { cv } from "tailwind-styled-v4"
+import { cv } from "zares-css"
 
 const buttonVariants = cv({
   base: "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
@@ -173,7 +173,7 @@ Fungsi `cx()` (atau `cn()`) digunakan untuk menggabungkan class secara kondision
 **Contoh (dari `vite/src/App.tsx` dan `standar-config-next-js-app/src/components/Card.tsx`):**
 
 ```tsx
-import { cx, cn } from "tailwind-styled-v4"
+import { cx, cn } from "zares-css"
 
 // cx() - conditional class merge
 function StatusDot({ online }: { online: boolean }) {
@@ -217,7 +217,7 @@ Gunakan `.extend()` untuk membuat komponen turunan dengan class tambahan tanpa h
 **Contoh (dari `vite/src/App.tsx`):**
 
 ```tsx
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Komponen dasar
 const Button = tw.button({
@@ -270,7 +270,7 @@ Gunakan `tw.server` untuk komponen yang hanya berjalan di server (Next.js App Ro
 **Contoh (dari `standar-config-next-js-app/src/app/page.tsx`):**
 
 ```tsx
-import { tw, server } from "tailwind-styled-v4"
+import { tw, server } from "zares-css"
 
 // Komponen server-only - akan dirender di server
 const SectionTitle = server.h2`
@@ -293,7 +293,7 @@ Fitur untuk dynamic theming dengan token yang dapat berubah pada runtime.
 **Contoh penggunaan:**
 
 ```tsx
-import { liveToken, setTokens, createUseTokens } from "tailwind-styled-v4"
+import { liveToken, setTokens, createUseTokens } from "zares-css"
 
 // Membuat live token
 const primaryColor = liveToken("blue-500")
@@ -327,7 +327,7 @@ Mendefinisikan state-based styles yang responsif terhadap state komponen.
 **Contoh:**
 
 ```tsx
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 const Button = tw.button({
   base: "px-4 py-2 rounded-lg font-medium transition",
@@ -354,7 +354,7 @@ Mendefinisikan styles berbasis container query.
 **Contoh:**
 
 ```tsx
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 const Card = tw.div({
   container: {

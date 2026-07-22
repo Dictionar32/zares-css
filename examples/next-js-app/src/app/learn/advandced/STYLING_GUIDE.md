@@ -73,7 +73,7 @@ export default function Page() {
 
 ```ts
 // ✅ GOOD
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 export const Button = tw.button({
   base: "px-4 py-2 rounded-lg font-medium transition-all",

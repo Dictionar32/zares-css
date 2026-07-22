@@ -85,7 +85,7 @@ Mari kita integrate type generation ke next-js-app build pipeline:
 
 ```typescript
 // examples/next-js-app/next.config.ts
-import { withTailwindStyled } from "tailwind-styled-v4/next"
+import { withTailwindStyled } from "zares-css/next"
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
@@ -141,7 +141,7 @@ Build-time plugins register via plugin system. ARIA injection plugin adalah buil
 
 ```typescript
 // examples/next-js-app/next.config.ts (extended)
-import { withTailwindStyled } from "tailwind-styled-v4/next"
+import { withTailwindStyled } from "zares-css/next"
 import { ariaPlugin } from "@tailwind-styled/plugin-accessibility"
 import { createTypeGenerationPlugin } from "@tailwind-styled/compiler"
 import type { NextConfig } from "next"
@@ -379,7 +379,7 @@ Reference: `packages/infrastructure/cli/README.md` - Figma Sync CLI
 Update `theme-and-cart-controls.tsx` untuk include semantic metadata:
 
 ```typescript
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 import { useTheme } from "@/hooks/useTheme"
 
 // Wave 3: Semantic metadata untuk theme button

@@ -25,7 +25,7 @@ Semua files menggunakan pattern yang sama:
 
 1. **Import `tw` from tailwind-styled-v4**
    ```typescript
-   import { tw } from "tailwind-styled-v4"
+   import { tw } from "zares-css"
    ```
 
 2. **Define styled components**
@@ -215,7 +215,7 @@ All files follow the same structure:
 
 ```typescript
 // 1. Imports
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 import { useState } from "react"
 
 // 2. Styled component definitions

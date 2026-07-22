@@ -5,7 +5,7 @@
 "use client"
 
 import { useState } from "react"
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // ─── Shell ───────────────────────────────────────────────────────────────────
 
@@ -1561,7 +1561,7 @@ export default function CssGridPage() {
                     <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
                         <H2>CSS Grid di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
                         <Code file="grid-components.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Responsive card grid
 const CardGrid = tw.div({

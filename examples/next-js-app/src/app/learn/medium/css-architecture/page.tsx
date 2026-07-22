@@ -601,7 +601,7 @@ html { scroll-behavior: smooth; }
           <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
             <H2>CSS Architecture di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
             <Code file="architecture-tw.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 // Tailwind v4 CSS (globals.css)
 
 /* @layer — extend Tailwind layers */

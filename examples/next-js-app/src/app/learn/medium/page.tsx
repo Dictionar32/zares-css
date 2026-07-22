@@ -1,7 +1,7 @@
 /**
  * CSS Medium — Overview
  */
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 import Link from "next/link"
 
 // ─── Layout ───────────────────────────────────────────────────────────────────

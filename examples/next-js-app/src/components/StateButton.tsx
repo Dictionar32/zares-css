@@ -5,7 +5,7 @@
  * tw.button({ states }) — di-resolve Rust bitmask lookup table build time.
  * Boolean props langsung tanpa kondisional className.
  */
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 export const StateButton = tw.button({
   base: `

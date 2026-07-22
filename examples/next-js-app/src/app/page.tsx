@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { tw } from "tailwind-styled-v4";
+import { tw } from "zares-css";
 
 // -- Component imports ---------------------------------------------------------
 import {
@@ -43,7 +43,7 @@ import {
   GradientButton,
 } from "@/components/ExtendDemo";
 import { ThemeAwareCard, AccentBox } from "@/components/ThemeUtils";
-import { twMerge } from "tailwind-styled-v4";
+import { twMerge } from "zares-css";
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Layout primitives — tw object config API, semantic HTML tags
@@ -217,7 +217,7 @@ const team = [
   { name: "Gita Lestari" },
 ];
 
-const codeSnippet = `import { tw, cv } from "tailwind-styled-v4"
+const codeSnippet = `import { tw, cv } from "zares-css"
 
 // Object config — semua di-resolve Rust build time
 const Button = tw.button({

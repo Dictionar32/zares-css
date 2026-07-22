@@ -4,7 +4,7 @@
  */
 import Link from "next/link"
 import { headers } from "next/headers"
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 import { LEARN_NAV } from "./nav"
 
 // ─── Shell ────────────────────────────────────────────────────────────────────

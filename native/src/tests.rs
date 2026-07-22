@@ -305,7 +305,7 @@ mod new_module_tests {
     #[test]
     fn transform_sub_bare_non_semantic_key_falls_back_to_span() {
         let src = r#"
-import { tw } from "tailwind-styled-v4";
+import { tw } from "zares-css";
 const Card = tw.div({ base: "p-4", sub: { body: "text-sm leading-relaxed", title: "text-xl font-bold", icon: "w-4 h-4" } });
 "#;
         let result = transform_source(src.to_string(), None);
@@ -321,7 +321,7 @@ const Card = tw.div({ base: "p-4", sub: { body: "text-sm leading-relaxed", title
     #[test]
     fn transform_sub_bare_semantic_tag_renders_as_that_tag() {
         let src = r#"
-import { tw } from "tailwind-styled-v4";
+import { tw } from "zares-css";
 const Nav = tw.nav({ base: "flex", sub: { header: "font-bold", footer: "text-sm", section: "px-4" } });
 "#;
         let result = transform_source(src.to_string(), None);
@@ -335,7 +335,7 @@ const Nav = tw.nav({ base: "flex", sub: { header: "font-bold", footer: "text-sm"
     #[test]
     fn transform_sub_explicit_tag_colon_name_uses_that_tag() {
         let src = r#"
-import { tw } from "tailwind-styled-v4";
+import { tw } from "zares-css";
 const Card = tw.div({ base: "p-4", sub: { "div:body": "text-sm", "pre:code": "font-mono", "a:link": "underline" } });
 "#;
         let result = transform_source(src.to_string(), None);

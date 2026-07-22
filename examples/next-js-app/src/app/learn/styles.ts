@@ -1,4 +1,4 @@
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // ─── Level strip link ──────────────────────────────────────────────────────────
 export const LevelStripLink = tw.a({

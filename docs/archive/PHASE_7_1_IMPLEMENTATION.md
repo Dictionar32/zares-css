@@ -302,7 +302,7 @@ parsed.is_arbitrary // false
 
 ```typescript
 // TypeScript usage unchanged
-import { parseClass } from "tailwind-styled-v4/compiler";
+import { parseClass } from "zares-css/compiler";
 
 const result = parseClass("px-4");
 // Returns parsed class info

@@ -6,8 +6,8 @@
  * Semua komponen yang subscribe otomatis re-render.
  */
 import React, { useState } from "react"
-import { tw } from "tailwind-styled-v4"
-import { liveToken, tokenVar, createUseTokens } from "tailwind-styled-v4/runtime"
+import { tw } from "zares-css"
+import { liveToken, tokenVar, createUseTokens } from "zares-css/runtime"
 
 // -- Deklarasi live tokens -----------------------------------------------------
 const brandTokens = liveToken({

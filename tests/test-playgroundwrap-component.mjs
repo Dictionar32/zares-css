@@ -7,7 +7,7 @@
  * at runtime.
  */
 
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 import assert from "assert"
 
 console.log("Testing PlaygroundWrap component with nested variants...\n")

@@ -574,7 +574,7 @@ if (document.startViewTransition) {
                     <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
                         <H2>Transitions & Animations di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
                         <Code file="animations-tw.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 /* Component dengan built-in transitions */
 const Button = tw.button({

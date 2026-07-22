@@ -1,5 +1,5 @@
 import React from "react"
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 /**
  * Badge — tw object config dengan variants

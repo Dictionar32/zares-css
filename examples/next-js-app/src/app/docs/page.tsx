@@ -13,7 +13,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { tw, cn } from "tailwind-styled-v4";
+import { tw, cn } from "zares-css";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Sidebar nav tree — sama persis struktur Fumadocs/Nextra
@@ -761,7 +761,7 @@ export default function DocsPage() {
             </H2>
 
             <Code filename="next.config.ts">
-              {`import { withTailwindStyled } from "tailwind-styled-v4/next"
+              {`import { withTailwindStyled } from "zares-css/next"
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {}
@@ -772,7 +772,7 @@ export default withTailwindStyled({
             </Code>
 
             <Code filename="src/app/layout.tsx">
-              {`import { TwCssInjector } from "tailwind-styled-v4/runtime-css"
+              {`import { TwCssInjector } from "zares-css/runtime-css"
 
 export default function RootLayout({ children }) {
   return (
@@ -818,7 +818,7 @@ export default function RootLayout({ children }) {
             <Code filename="vite.config.ts">
               {`import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
-import { tailwindStyled } from "tailwind-styled-v4/vite"
+import { tailwindStyled } from "zares-css/vite"
 
 export default defineConfig({
   plugins: [react(), tailwindStyled()],
@@ -835,7 +835,7 @@ export default defineConfig({
             <P>API paling sederhana — satu tag, satu string kelas.</P>
 
             <Code filename="Button.tsx">
-              {`import { tw } from "tailwind-styled-v4"
+              {`import { tw } from "zares-css"
 
 const Button = tw.button\`
   inline-flex items-center rounded-lg px-4 py-2
@@ -936,7 +936,7 @@ const Button = tw.button\`
             <P>Untuk styling non-komponen — mengembalikan <InlineCode>string</InlineCode> className, bukan komponen React.</P>
 
             <Code filename="badge.ts">
-              {`import { cv } from "tailwind-styled-v4"
+              {`import { cv } from "zares-css"
 
 const badge = cv({
   base: "inline-flex items-center gap-1.5 rounded-full font-medium",
@@ -1081,7 +1081,7 @@ const CardWrapper = tw.div\`@container\`
             <P>Komponen yang di-enforce hanya boleh render di server. Dev warning otomatis jika render di browser.</P>
 
             <Code filename="PageHeader.tsx">
-              {`import { server } from "tailwind-styled-v4"
+              {`import { server } from "zares-css"
 
 const PageHeader = server.header({
   base: "w-full border-b px-6 py-4 bg-white",
@@ -1102,7 +1102,7 @@ const PageHeader = server.header({
             <P>Design system factory dengan token terpusat. Token di-inject sebagai CSS custom properties <InlineCode>{`--sys-{group}-{name}`}</InlineCode>.</P>
 
             <Code filename="ui.ts">
-              {`import { createStyledSystem } from "tailwind-styled-v4"
+              {`import { createStyledSystem } from "zares-css"
 
 const ui = createStyledSystem({
   tokens: {
@@ -1140,7 +1140,7 @@ ui.setTokens({ colors: { primary: "#8b5cf6" } }) // update runtime`}
             <P>Reactive design token yang bisa diupdate runtime dan di-subscribe lewat React hook.</P>
 
             <Code filename="tokens.ts">
-              {`import { liveToken, tokenVar, createUseTokens } from "tailwind-styled-v4"
+              {`import { liveToken, tokenVar, createUseTokens } from "zares-css"
 
 const tokens = liveToken({
   primary: "#6366f1",
@@ -1176,7 +1176,7 @@ tokens.primary.set("#8b5cf6")`}
             </H2>
 
             <Code filename="utils.ts">
-              {`import { cn, cx, twMerge } from "tailwind-styled-v4"
+              {`import { cn, cx, twMerge } from "zares-css"
 
 // cn — merge dengan Tailwind conflict resolution
 cn("px-4 py-2", isActive && "bg-blue-500", className)

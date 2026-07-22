@@ -472,13 +472,13 @@ Create sub-entry points:
 ```typescript
 // Instead of:
 // npm install tailwind-styled-v4
-// import { compileCss, parseClass, analyzeClasses, ... } from "tailwind-styled-v4"
+// import { compileCss, parseClass, analyzeClasses, ... } from "zares-css"
 
 // Provide:
 // npm install tailwind-styled-v4
-// import { compileCss } from "tailwind-styled-v4/compiler"
-// import { parseClass } from "tailwind-styled-v4/parser"
-// import { analyzeClasses } from "tailwind-styled-v4/analyzer"
+// import { compileCss } from "zares-css/compiler"
+// import { parseClass } from "zares-css/parser"
+// import { analyzeClasses } from "zares-css/analyzer"
 ```
 
 **Update `package.json` exports:**

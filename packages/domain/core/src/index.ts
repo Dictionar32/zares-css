@@ -35,7 +35,7 @@ export {
 } from "./liveTokenEngine"
 // NOTE: Live Token Engine has been moved to @tailwind-styled/runtime
 // to prevent "use client" directive from affecting the main bundle.
-// Import live token functions from "tailwind-styled-v4/runtime" or
+// Import live token functions from "zares-css/runtime" or
 // "@tailwind-styled/runtime" instead.
 // Previous exports: applyTokenSet, createUseTokens, generateTokenCssString,
 // getToken, getTokens, liveToken, setToken, setTokens, subscribeTokens,
@@ -44,7 +44,7 @@ export type { MergeOptions } from "./merge"
 export { createTwMerge, mergeWithRules, twMerge } from "./merge"
 // ── Native Rust Bindings ─────────────────────────────────────────────────────
 // NOTE: Native functions are Node.js-only (require Rust .node binding).
-// Import from "tailwind-styled-v4/native" instead of the main bundle.
+// Import from "zares-css/native" instead of the main bundle.
 // This prevents fs/node built-ins from leaking into browser bundles.
 export type { ParsedClass, ParsedClassModifier, ThemeConfig } from "./native"
 export type { SubComponentEntry, SubComponentProps } from "./registry"

@@ -418,7 +418,7 @@ card.addEventListener('mouseleave', () => {
           <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
             <H2>Transforms di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
             <Code file="transforms-tw.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 /* Hover transforms via Tailwind */
 const Card = tw.div({

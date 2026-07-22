@@ -407,7 +407,7 @@ export default function SubgridPage() {
             <H2>Subgrid di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
             <P>Tailwind CSS v4 mendukung <IC>subgrid</IC> sebagai nilai grid template. Gunakan <IC>grid-rows-subgrid</IC> dan <IC>grid-cols-subgrid</IC> untuk mengaktifkan subgrid.</P>
             <Code file="tw-subgrid.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 /* Parent grid — definisikan track dan baris */
 const CardGrid = tw.div({

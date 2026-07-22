@@ -1,7 +1,7 @@
 /**
  * /learn — Overview landing page
  */
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 import { LEARN_NAV } from "./nav"
 import * as s from "./styles"
 

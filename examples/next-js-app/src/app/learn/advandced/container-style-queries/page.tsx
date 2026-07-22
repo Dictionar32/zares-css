@@ -456,7 +456,7 @@ export default function ContainerStyleQueriesPage() {
             <H2>Container Queries di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
             <P>Tailwind CSS v4 punya dukungan native container queries. Gunakan prefix <IC>@</IC> untuk container queries dan <IC>@[Xpx]</IC> untuk arbitrary sizes.</P>
             <Code file="tw-container.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 /* Definisikan container */
 const CardWrapper = tw.div({

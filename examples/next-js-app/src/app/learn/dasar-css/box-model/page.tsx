@@ -8,7 +8,7 @@
 "use client"
 
 import { useState } from "react"
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shell
@@ -3583,7 +3583,7 @@ h1 {
             </P>
 
             <Code file="components.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Card dengan box model lengkap
 const Card = tw.article({

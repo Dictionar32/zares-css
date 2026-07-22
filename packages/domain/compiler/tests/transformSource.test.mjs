@@ -21,7 +21,7 @@ const { transformSource } = mod
 describe("transformSource", () => {
   it("transforms basic tw template literal", () => {
     const source = `
-      import { tw } from "tailwind-styled-v4"
+      import { tw } from "zares-css"
       const Button = tw.button\`px-4 py-2 rounded\`
     `
     const result = transformSource(source, { filename: "Button.tsx" })

@@ -16,7 +16,7 @@ npm install tailwind-styled-v4
 
 ```ts
 // next.config.ts
-import { withTailwindStyled } from "tailwind-styled-v4/next"
+import { withTailwindStyled } from "zares-css/next"
 export default withTailwindStyled()(nextConfig)
 ```
 
@@ -29,7 +29,7 @@ Plugin otomatis:
 
 ```tsx
 // src/app/page.tsx
-import { tw, cv } from "tailwind-styled-v4"
+import { tw, cv } from "zares-css"
 
 const Hero = tw.div`
   min-h-screen flex flex-col items-center justify-center
@@ -90,14 +90,14 @@ Auto-generated: src/app/globals.css
 
 `tailwind.config.ts` berisi preset dari library:
 ```ts
-import { defaultPreset } from "tailwind-styled-v4/preset"
+import { defaultPreset } from "zares-css/preset"
 export default { presets: [defaultPreset], content: [...], safelist: [...] }
 ```
 
 Developer bisa override kapanpun:
 ```ts
 // tailwind.config.ts
-import { defaultPreset } from "tailwind-styled-v4/preset"
+import { defaultPreset } from "zares-css/preset"
 export default {
   presets: [defaultPreset],
   theme: {
@@ -114,7 +114,7 @@ export default {
 
 ```tsx
 // Server Component — no "use client" needed
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // tw.server.* → compiler guarantees this stays server-only
 const Layout = tw.server.div`min-h-screen bg-zinc-950`
@@ -153,7 +153,7 @@ vs Tailwind default: ~300kb global CSS untuk semua routes.
 Inject di layout:
 ```tsx
 // app/layout.tsx
-import { TwCssInjector } from "tailwind-styled-v4/css"
+import { TwCssInjector } from "zares-css/css"
 
 export default function Layout({ children }) {
   return (

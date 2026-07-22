@@ -287,7 +287,7 @@ const css = extractAnimationCss()
 
 #### core
 ```typescript
-import { tw, server, cv, cn, cx, cxm, twMerge, liveToken, setToken, getTokens, tokenRef, tokenVar, createTheme, parseTailwindClasses } from "tailwind-styled-v4"
+import { tw, server, cv, cn, cx, cxm, twMerge, liveToken, setToken, getTokens, tokenRef, tokenVar, createTheme, parseTailwindClasses } from "zares-css"
 
 // Test: cn/cx merge
 const merged = cn("p-4", "m-2", "text-sm")
@@ -512,7 +512,7 @@ resetHistory()
 
 #### next
 ```typescript
-import { withTailwindStyled, parseNextAdapterOptions } from "tailwind-styled-v4/next"
+import { withTailwindStyled, parseNextAdapterOptions } from "zares-css/next"
 
 // Test: Parse Next adapter options
 const options = parseNextAdapterOptions({

@@ -6,7 +6,7 @@
  *  2. compileCssFromClasses via Rust engine
  *  3. scanSource untuk deteksi kelas di source code
  */
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 import { compileCssFromClasses } from "@tailwind-styled/compiler"
 import { scanSource } from "@tailwind-styled/scanner"
 
@@ -38,7 +38,7 @@ console.log(`Resolved: ${resolvedClasses.length} classes`)
 
 // ── 3. scanSource ─────────────────────────────────────────────────────────────
 const sampleSource = `
-  import { tw } from "tailwind-styled-v4"
+  import { tw } from "zares-css"
   const Button = tw.button\`bg-blue-500 text-white px-4 py-2 hover:bg-blue-600\`
   const Card = tw.div\`rounded-xl shadow-md p-6\`
   const title = <h1 className="text-2xl font-bold text-gray-900">Hello</h1>

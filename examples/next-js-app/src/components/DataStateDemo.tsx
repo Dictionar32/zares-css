@@ -7,7 +7,7 @@
  * Toggle style via setAttribute("data-open", "true") — tidak butuh useState.
  */
 import React, { useRef } from "react"
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 const Accordion = tw.div({
   base: "rounded-xl border border-gray-200 bg-white overflow-hidden",

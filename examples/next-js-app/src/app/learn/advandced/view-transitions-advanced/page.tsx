@@ -477,7 +477,7 @@ export function VTLink({ href, children, className }: VTLinkProps) {
           <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
             <H2>View Transitions di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
             <Code file="tw-vt.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 /* Komponen dengan view-transition-name via arbitrary CSS */
 const HeroImage = tw.img({

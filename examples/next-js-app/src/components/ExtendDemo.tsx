@@ -5,7 +5,7 @@
  * .extend() — tambah class di atas base
  * .withSub<>() — strict TypeScript untuk template literal sub-components
  */
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // -- tw(Component) — wrap existing component ----------------------------------
 // Simulasi dengan tw(<a>) — bisa juga tw(Link) dari next/link

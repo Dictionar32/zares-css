@@ -133,7 +133,7 @@ npm run example:dev
 
 ### 1. Semantic Metadata in styles.ts
 ```typescript
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 export const MyButton = tw.button({
   base: "px-4 py-2...",

@@ -15,7 +15,7 @@
  * Since { base: "..." } doesn't match TemplateStringsArray, it fails with confusing error.
  */
 
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // ✅ Works fine - simple object config
 const Simple = tw.div({

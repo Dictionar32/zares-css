@@ -403,7 +403,7 @@ export default function Page() {
 
 ```ts
 // styles.ts — ALL STYLING
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 export const Tooltip = tw.div({
   base: "fixed z-50 px-2 py-1 rounded-md bg-gray-900 text-white",

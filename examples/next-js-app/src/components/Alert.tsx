@@ -1,4 +1,4 @@
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 /**
  * Alert — object config API

@@ -19,7 +19,7 @@ npm install tailwind-styled-v4
 Then use directly:
 
 ```tsx
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 function App() {
   return <tw.div p-4 bg-blue-500 text-white rounded-lg>Hello</tw.div>
@@ -128,7 +128,7 @@ Import the ready-to-use `@theme` block:
 Or use the exported string directly:
 
 ```ts
-import { defaultThemeCss } from "tailwind-styled-v4/preset"
+import { defaultThemeCss } from "zares-css/preset"
 import { writeFileSync } from "fs"
 
 writeFileSync("globals.css", defaultThemeCss)
@@ -139,7 +139,7 @@ writeFileSync("globals.css", defaultThemeCss)
 Generate CSS with custom content paths:
 
 ```ts
-import { generateTailwindCss } from "tailwind-styled-v4/preset"
+import { generateTailwindCss } from "zares-css/preset"
 
 const css = generateTailwindCss(["./src/**/*.{tsx,ts}"])
 console.log(css)
@@ -153,7 +153,7 @@ Use as a Tailwind v3 preset:
 
 ```ts
 // tailwind.config.ts
-import { defaultPreset } from "tailwind-styled-v4/preset"
+import { defaultPreset } from "zares-css/preset"
 
 export default {
   presets: [defaultPreset],
@@ -166,7 +166,7 @@ export default {
 Generate a complete Tailwind v3 config:
 
 ```ts
-import { generateTailwindConfig } from "tailwind-styled-v4/preset"
+import { generateTailwindConfig } from "zares-css/preset"
 
 const config = generateTailwindConfig()
 console.log(config)
@@ -176,7 +176,7 @@ Output:
 
 ```ts
 import type { Config } from "tailwindcss"
-import { defaultPreset } from "tailwind-styled-v4/preset"
+import { defaultPreset } from "zares-css/preset"
 
 const safelist = (() => {
   try { return require(".tailwind-styled-safelist.json") as string[] }
@@ -209,7 +209,7 @@ Extend the preset in `tailwind.config.ts`:
 
 ```ts
 // tailwind.config.ts
-import { defaultPreset } from "tailwind-styled-v4/preset"
+import { defaultPreset } from "zares-css/preset"
 
 export default {
   presets: [defaultPreset],
@@ -231,7 +231,7 @@ export default {
 ### Zero-config (Recommended)
 
 ```tsx
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 export function Button({ children }: { children: React.ReactNode }) {
   return (
@@ -264,7 +264,7 @@ export function Button({ children }: { children: React.ReactNode }) {
 ### With Animation
 
 ```tsx
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 export function FadeIn({ children }: { children: React.ReactNode }) {
   return (
@@ -278,7 +278,7 @@ export function FadeIn({ children }: { children: React.ReactNode }) {
 ### With Dark Mode
 
 ```tsx
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 export function Card({ children }: { children: React.ReactNode }) {
   return (

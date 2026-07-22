@@ -43,7 +43,7 @@ for (let i = 0; i < totalFiles; i += 1) {
   fs.mkdirSync(bucket, { recursive: true })
 
   const classes = Array.from({ length: 8 }, randomClass).join(" ")
-  const content = `import { tw } from "tailwind-styled-v4"\n\nexport const Comp${i} = tw.div\`${classes}\`\n`
+  const content = `import { tw } from "zares-css"\n\nexport const Comp${i} = tw.div\`${classes}\`\n`
   fs.writeFileSync(path.join(bucket, `Comp${i}.tsx`), content)
 
   if (i % 5000 === 0) {

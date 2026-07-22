@@ -973,7 +973,7 @@ bash
 cd /home/claude/work/css-in-rust-tailwnd-js-css && cat examples/next-js-app/next.config.ts
 Keluaran
 
-import { withTailwindStyled } from "tailwind-styled-v4/next";
+import { withTailwindStyled } from "zares-css/next";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -3478,7 +3478,7 @@ Keluaran
 Confirmed:
 
 dist/runtime.mjs is "use client" tagged but is CLEAN (no top-level node builtins) — fine, no bug there. Good, no immediate problem with ./runtime subpath.
-dist/theme.mjs is "use client" tagged AND HAS top-level node builtins (fs, path, url, crypto, module)! This is the SAME exact bug class as index.mjs, but for the ./theme subpath export! And critically: the exports map for ./theme has NO "browser" condition at all (only types/import/require) — meaning there's no alternate browser-safe build for this subpath at all. So ANY consumer who does import { ... } from "tailwind-styled-v4/theme" in a Client Component (or any component reachable from app-client layer) would ALSO hit this exact Turbopack "Module not found: Can't resolve 'fs'" build failure!
+dist/theme.mjs is "use client" tagged AND HAS top-level node builtins (fs, path, url, crypto, module)! This is the SAME exact bug class as index.mjs, but for the ./theme subpath export! And critically: the exports map for ./theme has NO "browser" condition at all (only types/import/require) — meaning there's no alternate browser-safe build for this subpath at all. So ANY consumer who does import { ... } from "zares-css/theme" in a Client Component (or any component reachable from app-client layer) would ALSO hit this exact Turbopack "Module not found: Can't resolve 'fs'" build failure!
 This is a great, concrete, additional finding I should report to Anasa — the bug isn't isolated to the main . entry; it also affects ./theme (and structurally could affect other entries which we haven't checked yet that also import twTheme.ts or any other native.ts/shared-touching, "use client"-tainted source). Let's quickly check ALL entries for combination of (a) "use client" prefix AND (b) leaked builtins, to get the FULL list that needs fixing. We already know: index.mjs (use client + builtins, has browser variant available), theme.mjs (use client + builtins, NO browser variant), runtime.mjs (use client, clean - no fix needed).
 
 Let's check the remaining ones systematically: for ALL dist/*.mjs files, check both conditions.
@@ -3903,7 +3903,7 @@ Important finding! This is CRITICAL and different from domain/core's pattern: cr
 
 This means: simply redirecting native-bridge.ts to a stub (always return null) for the THEME entry would NOT be safe in the same way — if anyone actually calls createTheme() or compileDesignTokens() from the bundle that's been redirected to the null-stub, it would THROW at runtime (FATAL error), breaking functionality! This is different from index.mjs's situation.
 
-BUT WAIT — does this matter for the BUG WE'RE FIXING? Let's reconsider: this createTheme/compileDesignTokens from domain/theme's OWN index.ts (@tailwind-styled/theme package's main entry) is exposed via the ./theme umbrella subpath (tailwind-styled-v4/theme). Is createTheme actually CALLABLE/USED inside a "use client" boundary context? The "use client" taint comes from liveTokenEngine (a different, unrelated set of exports within the SAME entry file). The actual real-world usage pattern: a consumer doing import { createTheme } from "tailwind-styled-v4/theme" would do so typically in a Server Component / build-time context (since "Zero runtime overhead — themes di-resolve via CSS" per the doc comment, this sounds like a function meant to be called ONCE, server-side or at module init, to generate CSS — not literally something you'd call from inside a client component's render). But since the WHOLE entry got marked "use client" (because liveTokenEngine.ts, used elsewhere in same file, has that directive), Turbopack treats createTheme/compileDesignTokens as PART of the same client-tainted module too — and that's precisely the issue: an over-bro…
+BUT WAIT — does this matter for the BUG WE'RE FIXING? Let's reconsider: this createTheme/compileDesignTokens from domain/theme's OWN index.ts (@tailwind-styled/theme package's main entry) is exposed via the ./theme umbrella subpath (tailwind-styled-v4/theme). Is createTheme actually CALLABLE/USED inside a "use client" boundary context? The "use client" taint comes from liveTokenEngine (a different, unrelated set of exports within the SAME entry file). The actual real-world usage pattern: a consumer doing import { createTheme } from "zares-css/theme" would do so typically in a Server Component / build-time context (since "Zero runtime overhead — themes di-resolve via CSS" per the doc comment, this sounds like a function meant to be called ONCE, server-side or at module init, to generate CSS — not literally something you'd call from inside a client component's render). But since the WHOLE entry got marked "use client" (because liveTokenEngine.ts, used elsewhere in same file, has that directive), Turbopack treats createTheme/compileDesignTokens as PART of the same client-tainted module too — and that's precisely the issue: an over-bro…
 
 Tampilkan lebih sedikit
 
@@ -4316,7 +4316,7 @@ I'll build a minimal Next.js app (reusing my earlier /home/claude/work/repro inf
 
 package.json exports map matching the REAL project's (with browser/react-server/node/import/require conditions for ".").
 node_modules/tailwind-styled-v4 pointing to: dist/index.mjs (our fixed one), dist/index.browser.mjs (need to actually build this too via the real browser config, or just stub it since it's unrelated to this fix and already proven clean), dist/index.js, dist/index.d.ts (not needed since dts:false, no types checked in this test).
-A page that imports from "tailwind-styled-v4" in both a Server Component and a Client Component (mimicking docs/page.tsx and layout.tsx + ExtendDemo.tsx).
+A page that imports from "zares-css" in both a Server Component and a Client Component (mimicking docs/page.tsx and layout.tsx + ExtendDemo.tsx).
 Let's check if /home/claude/work/repro still exists (it should, since same sandbox session within this turn... wait, this is a NEW turn / new tool-call batch. Let me check if it persisted. The bash_tool likely persists within the same container across the whole conversation (not reset per turn) based on how this environment usually works, but let's verify.
 
 Tampilkan lebih sedikit
@@ -4364,7 +4364,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 EOF
 cat > app/page.tsx << 'EOF'
-import { tw } from "tailwind-styled-v4";
+import { tw } from "zares-css";
 
 const Box = tw.div`p-4 bg-blue-500 text-white`;
 
@@ -4375,7 +4375,7 @@ EOF
 mkdir -p app/client-widget
 cat > app/client-widget/ClientWidget.tsx << 'EOF'
 "use client";
-import { tw, twMerge } from "tailwind-styled-v4";
+import { tw, twMerge } from "zares-css";
 
 const Btn = tw.button`px-4 py-2 rounded`;
 
@@ -4516,7 +4516,7 @@ Failed to type check.
 Type error: Cannot find module 'tailwind-styled-v4' or its corresponding type declarations.
 
   1 | "use client";
-> 2 | import { tw, twMerge } from "tailwind-styled-v4";
+> 2 | import { tw, twMerge } from "zares-css";
     |                             ^
   3 |
   4 | const Btn = tw.button`px-4 py-2 rounded`;
@@ -4544,7 +4544,7 @@ Error: Turbopack build failed with 2 errors:
 ./app/client-widget/ClientWidget.tsx:2:1
 Module not found: Can't resolve 'tailwind-styled-v4'
   1 | "use client";
-> 2 | import { tw, twMerge } from "tailwind-styled-v4";
+> 2 | import { tw, twMerge } from "zares-css";
     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   3 |
   4 | const Btn = tw.button`px-4 py-2 rounded`;
@@ -4562,7 +4562,7 @@ https://nextjs.org/docs/messages/module-not-found
 
 ./app/page.tsx:1:1
 Module not found: Can't resolve 'tailwind-styled-v4'
-> 1 | import { tw } from "tailwind-styled-v4";
+> 1 | import { tw } from "zares-css";
     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   2 |
   3 | const Box = tw.div`p-4 bg-blue-500 text-white`;
@@ -5015,27 +5015,27 @@ bash
 cd /home/claude/work/css-in-rust-tailwnd-js-css && grep -rn "from \"tailwind-styled-v4/theme\"\|from \"tailwind-styled-v4\"" examples/ 2>/dev/null | grep -v node_modules | head -20
 Keluaran
 
-examples/next-js-app/src/components/Card.tsx:2:import { tw, cn } from "tailwind-styled-v4"
-examples/next-js-app/src/components/StateButton.tsx:8:import { tw } from "tailwind-styled-v4"
-examples/next-js-app/src/components/Input.tsx:2:import { tw } from "tailwind-styled-v4"
-examples/next-js-app/src/components/Button.tsx:1:import { tw } from "tailwind-styled-v4"
-examples/next-js-app/src/components/Badge.tsx:2:import { tw } from "tailwind-styled-v4"
-examples/next-js-app/src/components/ExtendDemo.tsx:8:import { tw } from "tailwind-styled-v4"
-examples/next-js-app/src/components/Avatar.tsx:2:import { tw, cn } from "tailwind-styled-v4"
-examples/next-js-app/src/components/Alert.tsx:1:import { tw } from "tailwind-styled-v4"
-examples/next-js-app/src/components/DesignSystem.tsx:9:import { createStyledSystem } from "tailwind-styled-v4"
-examples/next-js-app/src/components/ThemeUtils.tsx:6:import { tw, t, cssVar, twVar, v4Tokens, createTheme } from "tailwind-styled-v4"
-examples/next-js-app/src/components/ContainerDemo.tsx:7:import { tw } from "tailwind-styled-v4"
-examples/next-js-app/src/components/LiveTokenDemo.tsx:9:import { tw, liveToken, tokenVar, createUseTokens } from "tailwind-styled-v4"
-examples/next-js-app/src/components/theme-and-cart-controls.tsx:4:import { tw } from "tailwind-styled-v4";
-examples/next-js-app/src/components/DataStateDemo.tsx:10:import { tw } from "tailwind-styled-v4"
-examples/next-js-app/src/app/page.tsx:4:import { tw } from "tailwind-styled-v4";
-examples/next-js-app/src/app/page.tsx:46:import { twMerge } from "tailwind-styled-v4";
-examples/next-js-app/src/app/page.tsx:220:const codeSnippet = `import { tw, cv } from "tailwind-styled-v4"
-examples/next-js-app/src/app/docs/page.tsx:7:import { tw } from "tailwind-styled-v4"
-examples/README.md:49:import { tw } from "tailwind-styled-v4"
-examples/README.md:82:import { tw } from "tailwind-styled-v4"
-Confirmed: NOTHING in their own example app imports from "tailwind-styled-v4/theme" subpath at all. LiveTokenDemo.tsx imports liveToken, tokenVar, createUseTokens from the MAIN "tailwind-styled-v4" package (not /theme). And ThemeUtils.tsx imports createTheme ALSO from the main package — wait, but earlier we confirmed createTheme exported from the MAIN index.ts is the domain/core/src/twTheme.ts version (lightweight, CSS-var based, NO native dependency) — DIFFERENT from domain/theme/src/index.ts's createTheme (native-required, throws if unavailable)! There are genuinely TWO DIFFERENT createTheme functions with the same name, and the main package only exposes the domain/core one. The domain/theme one (native-required) is ONLY reachable via the /theme subpath specifically.
+examples/next-js-app/src/components/Card.tsx:2:import { tw, cn } from "zares-css"
+examples/next-js-app/src/components/StateButton.tsx:8:import { tw } from "zares-css"
+examples/next-js-app/src/components/Input.tsx:2:import { tw } from "zares-css"
+examples/next-js-app/src/components/Button.tsx:1:import { tw } from "zares-css"
+examples/next-js-app/src/components/Badge.tsx:2:import { tw } from "zares-css"
+examples/next-js-app/src/components/ExtendDemo.tsx:8:import { tw } from "zares-css"
+examples/next-js-app/src/components/Avatar.tsx:2:import { tw, cn } from "zares-css"
+examples/next-js-app/src/components/Alert.tsx:1:import { tw } from "zares-css"
+examples/next-js-app/src/components/DesignSystem.tsx:9:import { createStyledSystem } from "zares-css"
+examples/next-js-app/src/components/ThemeUtils.tsx:6:import { tw, t, cssVar, twVar, v4Tokens, createTheme } from "zares-css"
+examples/next-js-app/src/components/ContainerDemo.tsx:7:import { tw } from "zares-css"
+examples/next-js-app/src/components/LiveTokenDemo.tsx:9:import { tw, liveToken, tokenVar, createUseTokens } from "zares-css"
+examples/next-js-app/src/components/theme-and-cart-controls.tsx:4:import { tw } from "zares-css";
+examples/next-js-app/src/components/DataStateDemo.tsx:10:import { tw } from "zares-css"
+examples/next-js-app/src/app/page.tsx:4:import { tw } from "zares-css";
+examples/next-js-app/src/app/page.tsx:46:import { twMerge } from "zares-css";
+examples/next-js-app/src/app/page.tsx:220:const codeSnippet = `import { tw, cv } from "zares-css"
+examples/next-js-app/src/app/docs/page.tsx:7:import { tw } from "zares-css"
+examples/README.md:49:import { tw } from "zares-css"
+examples/README.md:82:import { tw } from "zares-css"
+Confirmed: NOTHING in their own example app imports from "zares-css/theme" subpath at all. LiveTokenDemo.tsx imports liveToken, tokenVar, createUseTokens from the MAIN "tailwind-styled-v4" package (not /theme). And ThemeUtils.tsx imports createTheme ALSO from the main package — wait, but earlier we confirmed createTheme exported from the MAIN index.ts is the domain/core/src/twTheme.ts version (lightweight, CSS-var based, NO native dependency) — DIFFERENT from domain/theme/src/index.ts's createTheme (native-required, throws if unavailable)! There are genuinely TWO DIFFERENT createTheme functions with the same name, and the main package only exposes the domain/core one. The domain/theme one (native-required) is ONLY reachable via the /theme subpath specifically.
 
 So in their OWN example app, /theme subpath isn't used anywhere. This means: removing the live-token re-export from domain/theme/src/index.ts (so ./theme no longer carries the "use client" taint) is safe relative to their own codebase, and is a fairly contained, narrow surface change (just removing redundant duplicate exports that are already available via main . entry or the dedicated ./live-tokens subpath). It IS technically a public API surface change for the PUBLISHED package (removing exports from the ./theme subpath could be breaking for any THIRD-PARTY consumer who imports live-token functions specifically via tailwind-styled-v4/theme rather than the main entry or /live-tokens subpath) - I should flag this clearly as a semver consideration, recommend either:
 (a) a minor/patch bump with a note in CHANGELOG (low risk since these are duplicated anyway, and the FIX is more valuable than this narrow theoretical breakage), or

@@ -116,7 +116,7 @@ const Button = tw.button`px-4 py-2 bg-blue-600 text-white`
 Type-safe variant resolution with caching and native Rust bindings:
 
 ```typescript
-import { cv } from "tailwind-styled-v4"
+import { cv } from "zares-css"
 
 const Button = tw.button({
   base: "px-4 py-2 rounded-lg",
@@ -149,7 +149,7 @@ const ButtonVariants = cv({
 
 **cn()** — Simple class concatenation (no conflict resolution):
 ```typescript
-import { cn } from "tailwind-styled-v4"
+import { cn } from "zares-css"
 
 cn("p-4", "px-8")                    // → "p-4 px-8" (both kept)
 cn("flex", isActive && "opacity-100") // → "flex opacity-100"
@@ -158,7 +158,7 @@ cn(["gap-2", "flex-col"], "items-center")  // → "gap-2 flex-col items-center"
 
 **cx()** — Conflict-aware merging (uses Tailwind conflict resolution):
 ```typescript
-import { cx } from "tailwind-styled-v4"
+import { cx } from "zares-css"
 
 cx("p-4", "p-8")                     // → "p-8" (last wins)
 cx("bg-red-500", "bg-blue-500")      // → "bg-blue-500"
@@ -172,7 +172,7 @@ cx(["flex", isActive && "gap-2"])    // → "flex gap-2" OR "flex"
 Create a complete design system with tokens, components, and automatic CSS var injection:
 
 ```typescript
-import { createStyledSystem } from "tailwind-styled-v4"
+import { createStyledSystem } from "zares-css"
 
 const ui = createStyledSystem({
   // Step 1: Define design tokens
@@ -247,7 +247,7 @@ ui.cssVar("colors.primary")  // → "#6366f1"
 Create reactive tokens that update across entire app without re-rendering:
 
 ```typescript
-import { liveToken, createUseTokens, setToken, subscribeTokens } from "tailwind-styled-v4"
+import { liveToken, createUseTokens, setToken, subscribeTokens } from "zares-css"
 
 // Initialize live tokens
 const tokens = liveToken({
@@ -300,7 +300,7 @@ subscribeTokens("colors.primary", (newValue) => {
 ### twMerge() — Advanced Class Merging
 
 ```typescript
-import { twMerge, createTwMerge } from "tailwind-styled-v4"
+import { twMerge, createTwMerge } from "zares-css"
 
 // Built-in merge
 twMerge("p-4 p-8", "m-4", "flex")  // → "p-8 m-4 flex"
@@ -319,7 +319,7 @@ customMerge("p-4 p-8", "m-4")  // → "p-8 m-4"
 ### styled() — Low-level Variant Resolution
 
 ```typescript
-import { styled, resolveStyledClassName } from "tailwind-styled-v4"
+import { styled, resolveStyledClassName } from "zares-css"
 
 const buttonStyle = styled({
   base: "px-4 py-2 rounded",
@@ -944,7 +944,7 @@ learn/advandced/anchor-positioning/
 
 ```typescript
 // styles.ts
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // ==== LAYOUT SHELL ====
 export const Page = tw.div({
@@ -989,7 +989,7 @@ export const Card = tw.div({
 
 ```typescript
 // page.tsx
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Shell
 export const Page = tw.div`min-h-screen bg-slate-50`

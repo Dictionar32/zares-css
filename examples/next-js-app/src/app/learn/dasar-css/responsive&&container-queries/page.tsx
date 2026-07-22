@@ -5,7 +5,7 @@
 "use client"
 
 import { useState } from "react"
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // ─── Shell ────────────────────────────────────────────────────────────────────
 
@@ -1246,7 +1246,7 @@ env(safe-area-inset-left)    /* inset kiri (landscape notch) */
                     <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
                         <H2>Responsive di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
                         <Code file="responsive-tw.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 // Breakpoint classes langsung di base/variants
 const Grid = tw.div({

@@ -610,7 +610,7 @@ document.adoptedStyleSheets = [tokenSheet]
                     <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
                         <H2>CSS-JS Integration di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
                         <Code file="css-js-tw.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 import { useState, useEffect, useRef, useCallback } from "react"
 
 // ✅ Custom property dari JS ke tw component

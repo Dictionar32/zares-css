@@ -430,7 +430,7 @@ function PopoverDemo() {
           <Section id="tw-usage" onClick={() => setActiveSection("tw-usage")}>
             <H2>Popover API di tailwind-styled-v4<H2.anchor href="#tw-usage">#</H2.anchor></H2>
             <Code file="tw-popover.tsx">{`
-import { tw } from "tailwind-styled-v4"
+import { tw } from "zares-css"
 
 /* Popover trigger button */
 const TriggerBtn = tw.button({
