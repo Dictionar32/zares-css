@@ -196,6 +196,8 @@ Prefix→property mapping-nya sengaja hardcoded manual (bukan diturunkan dari Li
 
 📖 Baca lengkapnya (cara kerja, tabel prefix, semua batasan) di [`docs/DYNAMIC_PROPS.md`](./docs/DYNAMIC_PROPS.md).
 
+> **Bukan untuk dikira sama dengan desimal spacing statis.** Bracket `[...]` di section ini murni penanda "nilai ini dari runtime/props, generate CSS Variable" — beda dari arbitrary value bracket biasa. Kelas desimal statis seperti `w-1.5`, `p-2.5`, `gap-0.5` **tidak butuh bracket sama sekali**; itu utility Tailwind v4 biasa (continuous spacing scale, `n * 0.25rem`) yang diresolve langsung lewat `theme_resolver.rs::resolve_spacing`, gak lewat jalur dynamic props ini.
+
 ---
 
 ### 4. `cv()` — Class Variant Function
@@ -963,7 +965,8 @@ Tailwind-styled-v4 performs 18+ layers of build-time optimization yang menghasil
 PR dan issue sangat welcome. Prioritas saat ini:
 
 - [ ] Pre-built binary untuk macOS arm64, x64, Linux, Windows
-- [ ] Docs website (VitePress)
+- [ ] Docs websi
+te (VitePress)
 - [ ] Vue & Svelte adapter yang lebih matang
 - [ ] Plugin API public docs
 

@@ -179,6 +179,8 @@ Result: False positives reduced 95%
 Benefit: _initial-scan.css stays ~3500 lines, not 10,000+
 ```
 
+> **Catatan (Tailwind v4 — continuous spacing scale):** filter di atas hanya menyasar pola arbitrary bracket `[...]`. Sejak Tailwind v4 mendukung desimal langsung di spacing scale (mis. `w-1.5`, `p-2.5`, `gap-0.5` → dihitung `n * 0.25rem`), nilai desimal semacam itu **tidak lagi perlu ditulis dalam bracket** dan karenanya tidak pernah masuk ke regex filter ini. Class seperti `top-[205.64px]` yang tetap dibungkus bracket tetap dianggap computed value dan tetap difilter seperti biasa — filter ini murni soal arbitrary value, bukan soal desimal itu sendiri.
+
 ### 3. Route Attribution: Which Files Belong Where?
 
 ```
