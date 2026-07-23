@@ -330,10 +330,19 @@ export function isScannableFile(filePath: string, includeExtensions = DEFAULT_EX
   return includeExtensions.includes(path.extname(filePath))
 }
 
-export function scanFile(filePath: string): ScanFileResult {
+export function scanFile(
+  filePath: string,
+  options: { includeDynamicProps?: boolean } = {}
+): ScanFileResult {
   const { scanFileNative } = require("./native-bridge")
-  const result = scanFileNative(filePath) as {
-    file: string; classes: string[]; hash: string; ok: boolean; error?: string | null
+  const includeDynamicProps = options.includeDynamicProps ?? false
+  const result = scanFileNative(filePath, includeDynamicProps) as {
+    file: string
+    classes: string[]
+    hash: string
+    ok: boolean
+    error?: string | null
+    dynamicProps: import("./oxc-bridge").DynamicPropUsage[]
   }
   if (!result.ok) {
     throw new Error(`scanFile failed for ${filePath}: ${result.error ?? "unknown error"}`)
@@ -342,6 +351,9 @@ export function scanFile(filePath: string): ScanFileResult {
     file: result.file,
     classes: result.classes,
     ...(result.hash ? { hash: result.hash } : {}),
+    // Absent (not `[]`) unless explicitly requested — keeps default scans'
+    // shape identical to before this field existed.
+    ...(includeDynamicProps ? { dynamicProps: result.dynamicProps } : {}),
   }
 }
 
@@ -549,3 +561,10 @@ export async function scanWorkspaceAsync(
   }
 }
 export { extractClassesNative, batchExtractClassesNative } from "./native-bridge"
+
+// Manual/optional structural + dynamic-props analysis (Oxc AST-backed).
+// Deliberately NOT used by scanFile/scanWorkspace above — see AGENT.md,
+// "Opsi B", for why this stays a separate, opt-in entry point rather than
+// being folded into the hot scan path.
+export { oxcExtractClasses } from "./oxc-bridge"
+export type { OxcExtractResult, DynamicPropUsage } from "./oxc-bridge"

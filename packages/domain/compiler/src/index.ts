@@ -672,3 +672,15 @@ export const extractAndGenerateStateCss = (source: string, filename: string): Ge
   }
   return native.extractAndGenerateStateCss(source, filename) as GeneratedStateRule[]
 }
+
+// Manual/optional: build-time vs minimal-runtime split for dynamic JSX
+// prop values. See AGENT.md for integration status/limitations.
+export {
+  compileDynamicProps,
+  generateDynamicPropsCss,
+} from "./dynamicPropsCompiler"
+export type {
+  StaticClassEntry,
+  RuntimeWriteEntry,
+  DynamicPropsCompileResult,
+} from "./dynamicPropsCompiler"

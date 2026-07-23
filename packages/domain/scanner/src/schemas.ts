@@ -42,10 +42,23 @@ export const ScanWorkspaceOptionsSchema = z.object({
 
 export type ScanWorkspaceOptions = z.infer<typeof ScanWorkspaceOptionsSchema>
 
+const DynamicPropUsageSchema = z.object({
+  componentName: z.string(),
+  attrName: z.string(),
+  kind: z.enum(["static", "theme_resolvable", "runtime"]),
+  themeRoot: z.string().optional(),
+})
+
 export const ScanFileResultSchema = z.object({
   file: z.string(),
   classes: z.array(z.string()),
   hash: z.string().optional(),
+  /**
+   * Only populated when `scanFile(path, { includeDynamicProps: true })` is
+   * used — absent (not just empty) for regular scans that didn't opt in,
+   * to keep default scan results exactly as before.
+   */
+  dynamicProps: z.array(DynamicPropUsageSchema).optional(),
 })
 
 export type ScanFileResult = z.infer<typeof ScanFileResultSchema>

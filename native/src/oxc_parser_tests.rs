@@ -1,6 +1,6 @@
 //! Test-only module extracted from oxc_parser.rs
 
-use crate::oxc_parser::{extract_classes_oxc, extract_classes_regex, run_structural_pass};
+use crate::oxc_parser::{extract_classes_oxc, extract_classes_regex, run_structural_pass, PropValueKind};
 
 #[cfg(test)]
 mod tests {
@@ -56,7 +56,7 @@ mod tests {
     #[test]
     fn imports() {
         let r = extract_classes_oxc(r#"import { tw } from "zares-css""#, "x.ts");
-        assert!(r.imports.contains(&"tailwind-styled-v4".to_string()));
+        assert!(r.imports.contains(&"zares-css".to_string()));
     }
 
     #[test]
@@ -66,7 +66,13 @@ mod tests {
             "import { tw } from \"tailwind-styled-v4\"",
             "import React from \"react\"",
             "const Button = tw.button`bg-blue-500 text-white px-4 hover:bg-blue-600`",
-            "const Card = tw.div({ base: \"rounded-lg shadow-md\", variants: { s: { sm: \"text-sm\" } } })",
+            // Trailing `;` required here — without it, this line ending in `})`
+            // followed by a line starting with `<div` is ASI-ambiguous: Oxc can
+            // parse it as `... }) < div` (a comparison) instead of two separate
+            // statements, which fails the whole file's parse. See
+            // jsx_and_tagged_template_together_no_strip / debug_parse_error_detail
+            // for the isolated repro of this ambiguity.
+            "const Card = tw.div({ base: \"rounded-lg shadow-md\", variants: { s: { sm: \"text-sm\" } } });",
             "<div className=\"flex items-center gap-4\">ok</div>",
         ].join("\n");
 
@@ -190,10 +196,13 @@ fn debug_structural_pass() {
     println!("directives: {}", ret.program.directives.len());
 
     // Cek apakah file tsx bisa parse source ini
-    let (names, use_client, imports) = run_structural_pass(&src);
+    let (names, use_client, imports, dynamic_props, parse_errors) =
+        run_structural_pass(&src, "x.tsx");
     println!("names: {:?}", names);
     println!("use_client: {}", use_client);
     println!("imports: {:?}", imports);
+    println!("dynamic_props: {:?}", dynamic_props);
+    println!("parse_errors: {:?}", parse_errors);
 }
 
 #[test]
@@ -288,5 +297,92 @@ fn cn_multi_arg() {
         r.classes.contains(&"gap-2".to_string()),
         "gap-2 missing: {:?}",
         r.classes
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Regresi: JSX + tagged template literal di file yang sama, TANPA strip
+// regex (RE_JSX_LINE/RE_JSX_SELF dihapus dari run_structural_pass). Kalau
+// ada regresi parsing di sini, test ini yang akan gagal duluan.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn jsx_and_tagged_template_together_no_strip() {
+    let src = [
+        "import { tw } from \"tailwind-styled-v4\"",
+        "const Card = tw.div`bg-white rounded-xl p-4`",
+        "function DynamicCard({ bgColor, children }) {",
+        "  return <Card style={{ background: bgColor }} className=\"flex\">{children}</Card>",
+        "}",
+    ]
+    .join("\n");
+
+    let (names, _use_client, _imports, dynamic_props, parse_errors) =
+        run_structural_pass(&src, "x.tsx");
+
+    assert!(
+        parse_errors.is_empty(),
+        "parse gagal, seharusnya sukses tanpa strip: {:?}",
+        parse_errors
+    );
+
+    assert!(
+        names.contains(&"Card".to_string()),
+        "component name tidak terdeteksi: {:?}",
+        names
+    );
+    // Kalau strip masih ada, baris <Card ...> akan terhapus sebelum parsing
+    // dan dynamic_props akan selalu kosong walau ada expression container.
+    assert!(
+        !dynamic_props.is_empty(),
+        "dynamic_props kosong — kemungkinan JSX masih ter-strip sebelum parsing"
+    );
+}
+
+#[test]
+fn dynamic_prop_classification_static() {
+    let src = r##"function Card() { return <div bgColor="#1e293b" /> }"##;
+    let (_, _, _, dynamic_props, _) = run_structural_pass(src, "x.tsx");
+    let bg = dynamic_props
+        .iter()
+        .find(|p| p.attr_name == "bgColor")
+        .expect("bgColor tidak ditemukan di dynamic_props");
+    assert_eq!(bg.kind, PropValueKind::Static, "{:?}", bg.kind);
+}
+
+#[test]
+fn dynamic_prop_classification_runtime() {
+    // someState adalah local identifier — bukan literal, bukan theme import
+    let src = r#"function Card({ someState }) { return <div bgColor={someState} /> }"#;
+    let (_, _, _, dynamic_props, _) = run_structural_pass(src, "x.tsx");
+    let bg = dynamic_props
+        .iter()
+        .find(|p| p.attr_name == "bgColor")
+        .expect("bgColor tidak ditemukan di dynamic_props");
+    assert_eq!(bg.kind, PropValueKind::Runtime, "{:?}", bg.kind);
+}
+
+#[test]
+fn dynamic_prop_classification_theme_resolvable() {
+    // "theme" diimport dari path yang mengandung kata "theme" → heuristik
+    // theme_like_imports harus menandai root "theme" sebagai ThemeResolvable
+    let src = [
+        "import { theme } from \"./theme.config\"",
+        "function Card() { return <div bgColor={theme.primary} /> }",
+    ]
+    .join("\n");
+
+    let (_, _, _, dynamic_props, _) = run_structural_pass(&src, "x.tsx");
+    let bg = dynamic_props
+        .iter()
+        .find(|p| p.attr_name == "bgColor")
+        .expect("bgColor tidak ditemukan di dynamic_props");
+    assert_eq!(
+        bg.kind,
+        PropValueKind::ThemeResolvable {
+            root: "theme".to_string()
+        },
+        "{:?}",
+        bg.kind
     );
 }

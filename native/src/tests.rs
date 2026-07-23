@@ -85,6 +85,7 @@ mod tests {
             }],
             "Button",
             true,
+            &[],
         );
 
         assert!(rendered.contains("\"flex h-12 w-full\""));

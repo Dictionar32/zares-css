@@ -260,8 +260,16 @@ export interface AtomicRule {
  * # Performance
  * Pada proyek 200 file: ~8-12x lebih cepat dari JS sequential loop
  * karena parallel I/O dan tidak ada event loop overhead.
+ *
+ * `include_dynamic_props` (default `false`) opt-in ke Oxc AST structural
+ * pass tambahan per file (classify JSX dynamic prop values — lihat
+ * `oxc_parser::PropValueKind`). Ini kerjaan ekstra (parsing AST penuh, di
+ * luar regex class-extraction yang sudah jalan), jadi sengaja default-off
+ * supaya caller yang nggak butuh `dynamic_props` (mayoritas — build biasa)
+ * nggak kena biaya performa apa pun. Nggak menduplikasi baca file — source
+ * yang sudah di-load buat regex extraction dipakai ulang buat Oxc pass ini.
  */
-export declare function batchExtractClasses(filePaths: Array<string>): Array<BatchExtractResult>
+export declare function batchExtractClasses(filePaths: Array<string>, includeDynamicProps?: boolean | undefined | null): Array<BatchExtractResult>
 
 export interface BatchExtractResult {
   /** File path */
@@ -274,6 +282,13 @@ export interface BatchExtractResult {
   ok: boolean
   /** Error message jika gagal */
   error?: string
+  /**
+   * Only populated when `include_dynamic_props: true` is passed to
+   * `batch_extract_classes`. Empty (not absent) otherwise — kept as a
+   * plain array rather than `Option<Vec<_>>` so existing JS consumers
+   * that don't check for this field see `[]` instead of `undefined`.
+   */
+  dynamicProps: Array<OxcDynamicPropUsage>
 }
 
 /**
@@ -2040,6 +2055,25 @@ export interface NormalizeResult {
 export declare function optimizeCss(css: string): string
 
 /**
+ * NAPI-friendly flattening of `oxc_parser::DynamicPropUsage`. Rust enums
+ * carrying data (`PropValueKind::ThemeResolvable { root }`) don't map
+ * cleanly across the NAPI boundary, so `kind` is exposed as a plain string
+ * discriminant and `theme_root` carries the payload only when relevant.
+ *
+ * `kind` is one of: "static" | "theme_resolvable" | "runtime".
+ */
+export interface OxcDynamicPropUsage {
+  componentName: string
+  attrName: string
+  kind: string
+  /**
+   * Only present when `kind === "theme_resolvable"` — the root import
+   * identifier the value was traced back to (e.g. "theme").
+   */
+  themeRoot?: string
+}
+
+/**
  * Extract Tailwind classes using real Oxc AST parser.
  * Handles: tw.tag``, tw(Comp)``, base:"", className="", cx()/cn()
  * More accurate than regex — understands JSX, TypeScript, template literals.
@@ -2053,6 +2087,13 @@ export interface OxcExtractResult {
   hasUseClient: boolean
   imports: Array<string>
   engine: string
+  dynamicProps: Array<OxcDynamicPropUsage>
+  /**
+   * Non-empty when Oxc failed to fully parse `source` — see
+   * `oxc_parser::OxcExtractResult::parse_errors` for what this implies
+   * about the other fields on this struct (they may be incomplete).
+   */
+  parseErrors: Array<string>
 }
 
 /**
@@ -2859,7 +2900,7 @@ export interface ScanCacheStats {
  *
  * Eliminates the JS file read round-trip.
  */
-export declare function scanFile(filePath: string): ScanFileResult
+export declare function scanFile(filePath: string, includeDynamicProps?: boolean | undefined | null): ScanFileResult
 
 /**
  * Baca file, ekstrak Tailwind classes, dan hash kontennya dalam satu native call.
@@ -2879,6 +2920,11 @@ export interface ScanFileResult {
   hash: string
   ok: boolean
   error?: string
+  /**
+   * Only populated when `scan_file(path, true)` is called. Empty (not
+   * absent) otherwise — see `BatchExtractResult.dynamic_props` for why.
+   */
+  dynamicProps: Array<OxcDynamicPropUsage>
 }
 
 /**

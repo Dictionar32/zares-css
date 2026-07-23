@@ -23,6 +23,13 @@ function getDirname(): string {
   return process.cwd()
 }
 
+interface NativeOxcDynamicPropUsage {
+  componentName: string
+  attrName: string
+  kind: "static" | "theme_resolvable" | "runtime"
+  themeRoot?: string | null
+}
+
 interface NativeOxcBinding {
   oxcExtractClasses?: (
     source: string,
@@ -34,6 +41,8 @@ interface NativeOxcBinding {
     hasUseClient: boolean
     imports: string[]
     engine: string
+    dynamicProps: NativeOxcDynamicPropUsage[]
+    parseErrors: string[]
   }
 }
 
@@ -95,6 +104,28 @@ const createOxcBindingLoader = () => {
 
 const oxcBindingLoader = createOxcBindingLoader()
 
+/**
+ * Klasifikasi satu JSX attribute value dari komponen dinamis (mis.
+ * `bgColor={theme.primary}`), dipakai compiler untuk memutuskan apakah
+ * value bisa di-resolve jadi class build-time atau harus fallback ke
+ * mekanisme CSS runtime (mis. `element.style.setProperty`).
+ *
+ * - "static"            → literal (string/template/angka/boolean) → build-time class.
+ * - "theme_resolvable"  → member/identifier expression yang root-nya berasal
+ *                          dari import "theme-like" (lihat `themeRoot`) — *mungkin*
+ *                          bisa di-resolve build-time, compiler masih perlu
+ *                          benar-benar load modulnya untuk konfirmasi.
+ * - "runtime"           → selain di atas (state lokal, call expression, dst)
+ *                          — tidak bisa diketahui saat build.
+ */
+export interface DynamicPropUsage {
+  componentName: string
+  attrName: string
+  kind: "static" | "theme_resolvable" | "runtime"
+  /** Hanya ada kalau `kind === "theme_resolvable"`. */
+  themeRoot?: string
+}
+
 export interface OxcExtractResult {
   classes: string[]
   componentNames: string[]
@@ -102,6 +133,14 @@ export interface OxcExtractResult {
   hasUseClient: boolean
   imports: string[]
   engine: "oxc"
+  dynamicProps: DynamicPropUsage[]
+  /**
+   * Non-kosong kalau Oxc gagal parse `source` secara penuh (mis. ASI hazard:
+   * statement tanpa `;` diikuti baris yang diawali `<`). Kalau ini nggak
+   * kosong, field lain di atas kemungkinan besar TIDAK LENGKAP untuk file
+   * ini — parsing gagal sebelum structural visitor sempat jalan.
+   */
+  parseErrors: string[]
 }
 
 /**
@@ -121,6 +160,16 @@ export function oxcExtractClasses(source: string, filename: string): OxcExtractR
   }
 
   const r = binding.oxcExtractClasses(source, filename)
+
+  if (r.parseErrors.length > 0) {
+    for (const err of r.parseErrors) {
+      console.error(
+        `[zares-css] oxc parse error — structural extraction (component names, ` +
+        `imports, dynamic props) is likely INCOMPLETE for this file: ${err}`
+      )
+    }
+  }
+
   return {
     classes: r.classes,
     componentNames: r.componentNames,
@@ -128,5 +177,12 @@ export function oxcExtractClasses(source: string, filename: string): OxcExtractR
     hasUseClient: r.hasUseClient,
     imports: r.imports,
     engine: "oxc",
+    dynamicProps: r.dynamicProps.map((p) => ({
+      componentName: p.componentName,
+      attrName: p.attrName,
+      kind: p.kind,
+      ...(p.themeRoot != null ? { themeRoot: p.themeRoot } : {}),
+    })),
+    parseErrors: r.parseErrors,
   }
 }

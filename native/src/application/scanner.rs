@@ -300,6 +300,11 @@ pub struct BatchExtractResult {
     pub ok: bool,
     /// Error message jika gagal
     pub error: Option<String>,
+    /// Only populated when `include_dynamic_props: true` is passed to
+    /// `batch_extract_classes`. Empty (not absent) otherwise — kept as a
+    /// plain array rather than `Option<Vec<_>>` so existing JS consumers
+    /// that don't check for this field see `[]` instead of `undefined`.
+    pub dynamic_props: Vec<crate::infrastructure::oxc_api::OxcDynamicPropUsage>,
 }
 
 /// Extract classes dari banyak files sekaligus secara parallel.
@@ -310,8 +315,21 @@ pub struct BatchExtractResult {
 /// # Performance
 /// Pada proyek 200 file: ~8-12x lebih cepat dari JS sequential loop
 /// karena parallel I/O dan tidak ada event loop overhead.
+///
+/// `include_dynamic_props` (default `false`) opt-in ke Oxc AST structural
+/// pass tambahan per file (classify JSX dynamic prop values — lihat
+/// `oxc_parser::PropValueKind`). Ini kerjaan ekstra (parsing AST penuh, di
+/// luar regex class-extraction yang sudah jalan), jadi sengaja default-off
+/// supaya caller yang nggak butuh `dynamic_props` (mayoritas — build biasa)
+/// nggak kena biaya performa apa pun. Nggak menduplikasi baca file — source
+/// yang sudah di-load buat regex extraction dipakai ulang buat Oxc pass ini.
 #[napi]
-pub fn batch_extract_classes(file_paths: Vec<String>) -> Vec<BatchExtractResult> {
+pub fn batch_extract_classes(
+    file_paths: Vec<String>,
+    include_dynamic_props: Option<bool>,
+) -> Vec<BatchExtractResult> {
+    let include_dynamic_props = include_dynamic_props.unwrap_or(false);
+
     SCAN_THREAD_POOL.install(|| {
         file_paths
             .par_iter()
@@ -325,6 +343,7 @@ pub fn batch_extract_classes(file_paths: Vec<String>) -> Vec<BatchExtractResult>
                             content_hash: String::new(),
                             ok: false,
                             error: Some(e.to_string()),
+                            dynamic_props: vec![],
                         }
                     }
                 };
@@ -332,12 +351,29 @@ pub fn batch_extract_classes(file_paths: Vec<String>) -> Vec<BatchExtractResult>
                 let content_hash = short_hash(&content);
                 let classes = extract_tw_classes_from_source(&content);
 
+                let dynamic_props = if include_dynamic_props {
+                    let (_, _, _, dynamic_props, parse_errors) =
+                        crate::oxc_parser::run_structural_pass(&content, path);
+                    if !parse_errors.is_empty() {
+                        for err in &parse_errors {
+                            eprintln!(
+                                "[zares-css] oxc parse error during batch_extract_classes \
+                                 (dynamic_props may be incomplete for this file): {err}"
+                            );
+                        }
+                    }
+                    dynamic_props.into_iter().map(Into::into).collect()
+                } else {
+                    vec![]
+                };
+
                 BatchExtractResult {
                     file: path.clone(),
                     classes,
                     content_hash,
                     ok: true,
                     error: None,
+                    dynamic_props,
                 }
             })
             .collect()
@@ -655,6 +691,9 @@ pub struct ScanFileResult {
     pub hash: String,
     pub ok: bool,
     pub error: Option<String>,
+    /// Only populated when `scan_file(path, true)` is called. Empty (not
+    /// absent) otherwise — see `BatchExtractResult.dynamic_props` for why.
+    pub dynamic_props: Vec<crate::infrastructure::oxc_api::OxcDynamicPropUsage>,
 }
 
 /// Read a file and extract Tailwind classes + content hash in one native call.
@@ -666,7 +705,7 @@ pub struct ScanFileResult {
 ///
 /// Eliminates the JS file read round-trip.
 #[napi]
-pub fn scan_file(file_path: String) -> ScanFileResult {
+pub fn scan_file(file_path: String, include_dynamic_props: Option<bool>) -> ScanFileResult {
     let content = match std::fs::read_to_string(&file_path) {
         Ok(c) => c,
         Err(e) => {
@@ -676,6 +715,7 @@ pub fn scan_file(file_path: String) -> ScanFileResult {
                 hash: String::new(),
                 ok: false,
                 error: Some(e.to_string()),
+                dynamic_props: vec![],
             }
         }
     };
@@ -683,12 +723,29 @@ pub fn scan_file(file_path: String) -> ScanFileResult {
     let hash = short_hash(&content);
     let classes = extract_tw_classes_from_source(&content);
 
+    let dynamic_props = if include_dynamic_props.unwrap_or(false) {
+        let (_, _, _, dynamic_props, parse_errors) =
+            crate::oxc_parser::run_structural_pass(&content, &file_path);
+        if !parse_errors.is_empty() {
+            for err in &parse_errors {
+                eprintln!(
+                    "[zares-css] oxc parse error during scan_file \
+                     (dynamic_props may be incomplete for this file): {err}"
+                );
+            }
+        }
+        dynamic_props.into_iter().map(Into::into).collect()
+    } else {
+        vec![]
+    };
+
     ScanFileResult {
         file: file_path,
         classes,
         hash,
         ok: true,
         error: None,
+        dynamic_props,
     }
 }
 
@@ -792,7 +849,7 @@ mod scan_file_tests {
 
     #[test]
     fn test_scan_file_not_found() {
-        let result = scan_file("/nonexistent/path/file.tsx".to_string());
+        let result = scan_file("/nonexistent/path/file.tsx".to_string(), None);
         assert!(!result.ok);
         assert!(result.error.is_some());
         assert!(result.classes.is_empty());
@@ -804,7 +861,7 @@ mod scan_file_tests {
         writeln!(tmpfile, r#"<div className="p-4 flex text-lg">hello</div>"#).unwrap();
         let path = tmpfile.path().to_string_lossy().to_string();
 
-        let result = scan_file(path);
+        let result = scan_file(path, None);
         assert!(result.ok);
         assert!(!result.hash.is_empty());
         assert!(result.classes.contains(&"p-4".to_string()));

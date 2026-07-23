@@ -70,23 +70,31 @@ interface NativeScannerBinding {
     cachedLastSeenMs: number,
     nowMs: number
   ) => number
-  batchExtractClasses?: (filePaths: string[]) => Array<{
+  batchExtractClasses?: (
+    filePaths: string[],
+    includeDynamicProps?: boolean
+  ) => Array<{
     file: string
     classes: string[]
     content_hash: string
     ok: boolean
     error?: string | null
+    dynamicProps: import("./oxc-bridge").DynamicPropUsage[]
   }>
   scanCacheGet?: (filePath: string, contentHash: string) => string[] | null
   scanCachePut?: (filePath: string, contentHash: string, classes: string[], mtimeMs: number, size: number) => void
   scanCacheInvalidate?: (filePath: string) => void
   scanCacheStats?: () => { size: number }
-  scanFile?: (filePath: string) => {
+  scanFile?: (
+    filePath: string,
+    includeDynamicProps?: boolean
+  ) => {
     file: string
     classes: string[]
     hash: string
     ok: boolean
     error?: string | null
+    dynamicProps: import("./oxc-bridge").DynamicPropUsage[]
   }
   collectFiles?: (root: string, extensions: string[] | null, ignoreDirs: string[] | null) => string[]
   scanFilesBatch?: (filePaths: string[]) => Array<{
@@ -357,18 +365,22 @@ export function cachePriorityNative(
   return result
 }
 
-export function batchExtractClassesNative(filePaths: string[]): Array<{
+export function batchExtractClassesNative(
+  filePaths: string[],
+  includeDynamicProps = false
+): Array<{
   file: string
   classes: string[]
   content_hash: string
   ok: boolean
   error?: string | null
+  dynamicProps: import("./oxc-bridge").DynamicPropUsage[]
 }> {
   const binding = scannerGetBinding()
   if (!binding.batchExtractClasses) {
     throw new Error("FATAL: Native binding 'batchExtractClasses' is required but not available.")
   }
-  return binding.batchExtractClasses(filePaths) ?? []
+  return binding.batchExtractClasses(filePaths, includeDynamicProps) ?? []
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -412,18 +424,22 @@ export function scanCacheStats(): { size: number } {
   }
   return binding.scanCacheStats() as { size: number }
 }
-export function scanFileNative(filePath: string): {
+export function scanFileNative(
+  filePath: string,
+  includeDynamicProps = false
+): {
   file: string
   classes: string[]
   hash: string
   ok: boolean
   error?: string | null
+  dynamicProps: import("./oxc-bridge").DynamicPropUsage[]
 } {
   const binding = scannerGetBinding()
   if (!binding.scanFile) {
     throw new Error("FATAL: Native binding 'scanFile' is required but not available.")
   }
-  return binding.scanFile(filePath)
+  return binding.scanFile(filePath, includeDynamicProps)
 }
 /**
  * Native file walker — kumpulkan file paths rekursif tanpa baca konten.
