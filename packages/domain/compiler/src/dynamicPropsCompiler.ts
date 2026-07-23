@@ -127,7 +127,6 @@ export function compileDynamicProps(
       const key = `${usage.componentName}.${usage.attrName}`
       const literalValue = literalValues[key]
       if (literalValue === undefined) {
-        // eslint-disable-next-line no-console
         console.warn(
           `[zares-css] dynamic prop "${usage.attrName}" on "${usage.componentName}" ` +
           `was classified as static but no literal value was provided — skipping. ` +
