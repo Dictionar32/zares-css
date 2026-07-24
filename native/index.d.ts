@@ -843,11 +843,25 @@ export declare function compileTheme(tokensJson: string, themeName: string, pref
  * Compile class to CSS (full pipeline)
  *
  * Full pipeline: parse → resolve → generate CSS
+ *
+ * `file`/`line`/`column` (semua opsional, default `None`) — kalau
+ * disediakan, dipakai buat isi `CssRule.source` sehingga output CSS bisa
+ * menyertakan comment source location (lihat `build_css_string`). Additive:
+ * caller lama yang cuma kirim `(input, minify)` tetap jalan persis sama,
+ * `source` cuma `None` seperti sebelumnya.
  */
-export declare function compileToCss(input: string, minify?: boolean | undefined | null): string
+export declare function compileToCss(input: string, minify?: boolean | undefined | null, file?: string | undefined | null, line?: number | undefined | null, column?: number | undefined | null): string
 
-/** Compile multiple classes to CSS (batch) */
-export declare function compileToCssBatch(inputs: Array<string>, minify?: boolean | undefined | null): string
+/**
+ * Compile multiple classes to CSS (batch)
+ * Batch version of `compile_to_css`.
+ *
+ * `sources` (opsional) — kalau disediakan, HARUS sama panjang dengan
+ * `inputs`; index ke-N di `sources` (boleh `None` per-item) dipasangkan ke
+ * `inputs[N]`. Additive: caller lama yang cuma kirim `(inputs, minify)`
+ * tetap jalan, semua rule dapet `source: None` seperti sebelumnya.
+ */
+export declare function compileToCssBatch(inputs: Array<string>, minify?: boolean | undefined | null, sources?: Array<SourceLocation | undefined | null> | undefined | null): string
 
 /**
  * Compile semua kombinasi variant component ke lookup table.
@@ -2054,6 +2068,12 @@ export interface NormalizeResult {
 /** Optimize CSS: deduplicate rules with identical declaration blocks */
 export declare function optimizeCss(css: string): string
 
+export interface OxcClassPosition {
+  className: string
+  line: number
+  column: number
+}
+
 /**
  * NAPI-friendly flattening of `oxc_parser::DynamicPropUsage`. Rust enums
  * carrying data (`PropValueKind::ThemeResolvable { root }`) don't map
@@ -2094,6 +2114,14 @@ export interface OxcExtractResult {
    * about the other fields on this struct (they may be incomplete).
    */
   parseErrors: Array<string>
+  /**
+   * First-occurrence (line, column) per unique entry in `classes`. Feed
+   * this into `compileToCss(class, minify, {file, line, column})` /
+   * `compileToCssBatch(..., sources)` to get source-location comments in
+   * generated CSS — see `compileClassesWithSource` in the compiler
+   * package for a ready-made helper that does exactly this.
+   */
+  classPositions: Array<OxcClassPosition>
 }
 
 /**
@@ -3001,6 +3029,16 @@ export declare function setWatchAggregation(aggregationType: string): string
  * ```
  */
 export declare function setWatchMetrics(metricName: string, value: string): string
+
+/** Source location for debugging */
+export interface SourceLocation {
+  /** Source file path */
+  file: string
+  /** Line number (1-indexed) */
+  line: number
+  /** Column number (1-indexed) */
+  column: number
+}
 
 /**
  * Split whitespace-separated class list into individual class strings.

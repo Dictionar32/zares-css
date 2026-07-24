@@ -406,3 +406,10 @@ export function extractThemeFromCSS(cssContent: string): ThemeConfig {
 
   return theme
 }
+export function extractThemeFromCss(css: string): Array<{ key: string; value: string }> {
+  const binding = getBinding()
+  if (!binding?.extractThemeFromCss) {
+    throw new Error(NATIVE_UNAVAILABLE_MESSAGE)
+  }
+  return binding.extractThemeFromCss(css)
+}

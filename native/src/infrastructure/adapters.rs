@@ -317,16 +317,18 @@ impl CacheBackend for AdaptiveCacheAdapter {
 }
 
 /// ========== LAZY CACHE ADAPTER ==========
-/// Wraps LazyCache to implement CacheBackend trait
+/// Wraps a simple HashMap with timeout-based expiration to implement CacheBackend trait
 pub struct LazyCacheAdapter {
-    cache: Arc<Mutex<HashMap<String, String>>>,
+    cache: Arc<Mutex<HashMap<String, (String, std::time::Instant)>>>,
+    timeout_ms: u64,
     stats: Arc<Mutex<CacheStats>>,
 }
 
 impl LazyCacheAdapter {
-    pub fn new() -> Self {
+    pub fn new(timeout_ms: u64) -> Self {
         Self {
             cache: Arc::new(Mutex::new(HashMap::new())),
+            timeout_ms,
             stats: Arc::new(Mutex::new(CacheStats {
                 hits: 0,
                 misses: 0,
@@ -337,17 +339,165 @@ impl LazyCacheAdapter {
             })),
         }
     }
+
+    fn evict_expired(&self) {
+        if self.timeout_ms == 0 {
+            return;
+        }
+        let now = std::time::Instant::now();
+        if let Ok(mut cache) = self.cache.lock() {
+            cache.retain(|_, (_, instant)| {
+                now.duration_since(*instant).as_millis() < self.timeout_ms as u128
+            });
+        }
+    }
 }
 
 impl CacheBackend for LazyCacheAdapter {
     fn get(&self, key: &str) -> Option<String> {
-        if let Ok(cache) = self.cache.lock() {
-            if let Some(value) = cache.get(key) {
+        let mut cache = self.cache.lock().unwrap();
+        if let Some((value, instant)) = cache.get(key) {
+            if std::time::Instant::now().duration_since(*instant).as_millis() < self.timeout_ms as u128 {
                 if let Ok(mut stats) = self.stats.lock() {
                     stats.hits += 1;
                     stats.hit_rate = CacheStats::calculate_hit_rate(stats.hits, stats.misses);
                 }
                 return Some(value.clone());
+            } else {
+                cache.remove(key);
+            }
+        }
+        if let Ok(mut stats) = self.stats.lock() {
+            stats.misses += 1;
+            stats.hit_rate = CacheStats::calculate_hit_rate(stats.hits, stats.misses);
+        }
+        None
+    }
+
+    fn put(&self, key: String, value: String) {
+        let mut cache = self.cache.lock().unwrap();
+        cache.insert(key, (value, std::time::Instant::now()));
+        if let Ok(mut stats) = self.stats.lock() {
+            stats.current_size = cache.len() as u64;
+        }
+    }
+
+    fn remove(&self, key: &str) -> bool {
+        let mut cache = self.cache.lock().unwrap();
+        let removed = cache.remove(key).is_some();
+        if removed {
+            if let Ok(mut stats) = self.stats.lock() {
+                stats.current_size = stats.current_size.saturating_sub(1);
+            }
+        }
+        removed
+    }
+
+    fn clear(&self) {
+        let mut cache = self.cache.lock().unwrap();
+        cache.clear();
+        if let Ok(mut stats) = self.stats.lock() {
+            stats.current_size = 0;
+            stats.hits = 0;
+            stats.misses = 0;
+        }
+    }
+
+    fn stats(&self) -> CacheStats {
+        self.stats.lock().unwrap().clone()
+    }
+
+    fn capacity(&self) -> usize {
+        1000
+    }
+}
+
+/// ========== STRING-KEYED ADAPTIVE CACHE ==========
+/// Wraps AdaptiveCache<String, String> to implement CacheBackend trait
+pub struct StringKeyedAdaptiveCache {
+    inner: crate::infrastructure::adaptive_cache::AdaptiveCache<String, String>,
+    max: usize,
+}
+
+impl StringKeyedAdaptiveCache {
+    pub fn new(initial: usize, max: usize) -> Self {
+        Self {
+            inner: crate::infrastructure::adaptive_cache::AdaptiveCache::new(initial as u32),
+            max,
+        }
+    }
+}
+
+impl CacheBackend for StringKeyedAdaptiveCache {
+    fn get(&self, key: &str) -> Option<String> {
+        self.inner.get(&key.to_string())
+    }
+
+    fn put(&self, key: String, value: String) {
+        self.inner.put(key, value);
+        self.inner.adapt_size();
+    }
+
+    fn remove(&self, key: &str) -> bool {
+        self.inner.remove(&key.to_string())
+    }
+
+    fn clear(&self) {
+        self.inner.clear();
+    }
+
+    fn stats(&self) -> CacheStats {
+        let s = self.inner.stats();
+        CacheStats {
+            hits: s.hits,
+            misses: s.misses,
+            current_size: s.size as u64,
+            capacity: s.max_size as u64,
+            evictions: 0,
+            hit_rate: s.hit_rate / 100.0,
+        }
+    }
+
+    fn capacity(&self) -> usize {
+        self.max
+    }
+}
+
+/// ========== DISTRIBUTED CACHE ADAPTER ==========
+/// Wraps RedisDistributedCache to implement CacheBackend trait
+pub struct DistributedCacheAdapter {
+    cache: Arc<Mutex<crate::infrastructure::redis_distributed::RedisDistributedCache>>,
+    stats: Arc<Mutex<CacheStats>>,
+    capacity: usize,
+}
+
+impl DistributedCacheAdapter {
+    pub fn new(cache: crate::infrastructure::redis_distributed::RedisDistributedCache, capacity: usize) -> Self {
+        Self {
+            cache: Arc::new(Mutex::new(cache)),
+            stats: Arc::new(Mutex::new(CacheStats {
+                hits: 0,
+                misses: 0,
+                current_size: 0,
+                capacity: capacity as u64,
+                evictions: 0,
+                hit_rate: 0.0,
+            })),
+            capacity,
+        }
+    }
+}
+
+impl CacheBackend for DistributedCacheAdapter {
+    fn get(&self, key: &str) -> Option<String> {
+        if let Ok(mut cache) = self.cache.lock() {
+            let result = cache.get(key);
+            if result.success {
+                if let Ok(mut stats) = self.stats.lock() {
+                    stats.hits += 1;
+                    stats.hit_rate = CacheStats::calculate_hit_rate(stats.hits, stats.misses);
+                }
+                return result.value;
             }
         }
         if let Ok(mut stats) = self.stats.lock() {
@@ -359,7 +509,7 @@ impl CacheBackend for LazyCacheAdapter {
 
     fn put(&self, key: String, value: String) {
         if let Ok(mut cache) = self.cache.lock() {
-            cache.insert(key, value);
+            let _ = cache.put(&key, &value, None);
             if let Ok(mut stats) = self.stats.lock() {
                 stats.current_size = cache.len() as u64;
             }
@@ -368,10 +518,15 @@ impl CacheBackend for LazyCacheAdapter {
 
     fn remove(&self, key: &str) -> bool {
         if let Ok(mut cache) = self.cache.lock() {
-            cache.remove(key).is_some()
-        } else {
-            false
+            let result = cache.delete(key);
+            if result.success {
+                if let Ok(mut stats) = self.stats.lock() {
+                    stats.current_size = stats.current_size.saturating_sub(1);
+                }
+                return true;
+            }
         }
+        false
     }
 
     fn clear(&self) {
@@ -379,6 +534,8 @@ impl CacheBackend for LazyCacheAdapter {
             cache.clear();
             if let Ok(mut stats) = self.stats.lock() {
                 stats.current_size = 0;
+                stats.hits = 0;
+                stats.misses = 0;
             }
         }
     }
@@ -388,6 +545,6 @@ impl CacheBackend for LazyCacheAdapter {
     }
 
     fn capacity(&self) -> usize {
-        1000
+        self.capacity
     }
 }

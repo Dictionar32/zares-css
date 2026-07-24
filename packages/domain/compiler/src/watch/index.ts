@@ -35,3 +35,8 @@ export {
   type WatchHandle,
   type WatchStats,
 } from './watchSystemNative'
+
+export {
+  get_watch_system_status,
+  type WatchSystemStatus,
+} from '../nativeBridgeWrappers'

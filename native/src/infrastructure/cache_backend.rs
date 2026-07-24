@@ -118,14 +118,11 @@ impl CacheFactory {
             CacheConfig::Lru { capacity } => {
                 Arc::new(crate::infrastructure::lru_cache::LruCache::new(capacity))
             }
-            CacheConfig::Lazy { timeout_ms: _ } => {
-                // Use LruCache as fallback for now
-                Arc::new(crate::infrastructure::lru_cache::LruCache::new(1000))
+            CacheConfig::Lazy { timeout_ms } => {
+                Arc::new(crate::infrastructure::adapters::LazyCacheAdapter::new(timeout_ms))
             }
-            CacheConfig::Adaptive { initial_capacity, max_capacity: _ } => {
-                // Create LRU as initial backend, wrap in adaptive
-                let initial = Box::new(crate::infrastructure::lru_cache::LruCache::new(initial_capacity)) as Box<dyn CacheBackend>;
-                Arc::new(crate::infrastructure::adapters::AdaptiveCacheAdapter::new(initial))
+            CacheConfig::Adaptive { initial_capacity, max_capacity } => {
+                Arc::new(crate::infrastructure::adapters::StringKeyedAdaptiveCache::new(initial_capacity, max_capacity))
             }
             CacheConfig::Persistent { path, ttl_seconds: _ } => {
                 Arc::new(crate::infrastructure::adapters::PersistentCacheAdapter::new(path, 10000))
@@ -160,10 +157,28 @@ impl CacheFactory {
                 }
             }
             CacheConfig::Distributed { coordinator_url: _ } => {
-                // Distributed backend requires coordinator connection
-                // For now, return LRU cache as fallback
-                // TODO: Implement DistributedCache adapter for CacheBackend
-                Arc::new(crate::infrastructure::lru_cache::LruCache::new(10000))
+                let nodes = vec![
+                    crate::infrastructure::redis_distributed::RedisClusterNode {
+                        id: "node1".to_string(),
+                        host: "127.0.0.1".to_string(),
+                        port: 6379,
+                        region: "local".to_string(),
+                        primary: true,
+                        is_available: true,
+                    }
+                ];
+                let config = crate::infrastructure::redis_distributed::RedisDistributedConfig {
+                    nodes,
+                    replication_factor: 1,
+                    consistency_level: crate::infrastructure::redis_distributed::ConsistencyLevel::Eventual,
+                    conflict_resolution: crate::infrastructure::redis_distributed::ConflictResolution::LastWriteWins,
+                    health_check_interval_ms: 5000,
+                };
+                let distributed = match crate::infrastructure::redis_distributed::RedisDistributedCache::new(config) {
+                    Ok(d) => d,
+                    Err(_) => return Arc::new(crate::infrastructure::lru_cache::LruCache::new(10000)),
+                };
+                Arc::new(crate::infrastructure::adapters::DistributedCacheAdapter::new(distributed, 10000))
             }
         }
     }

@@ -23,6 +23,15 @@ use std::path::Path;
 // Result type
 // ─────────────────────────────────────────────────────────────────────────────
 
+#[derive(Debug, Clone)]
+pub struct ClassOccurrence {
+    pub class_name: String,
+    /// 1-indexed line number, first occurrence of this class in the file.
+    pub line: u32,
+    /// 1-indexed column number, first occurrence of this class in the file.
+    pub column: u32,
+}
+
 #[derive(Debug, Default)]
 pub struct OxcExtractResult {
     pub classes: Vec<String>,
@@ -38,6 +47,11 @@ pub struct OxcExtractResult {
     /// other field on this struct may be incomplete/empty for the affected
     /// file — the parse failed before the structural visitor ever ran.
     pub parse_errors: Vec<String>,
+    /// First-occurrence (line, column) per unique class in `classes` — same
+    /// dedup/filter/sort as `classes`, just paired with position. Powers
+    /// `CssRule.source` population (see AGENT.md gap #4) so compiled CSS can
+    /// carry a `/* file:line:column */` comment back to its origin.
+    pub class_positions: Vec<ClassOccurrence>,
 }
 
 /// Classification of a JSX attribute's value, used to decide whether the
@@ -320,60 +334,116 @@ static RE_CX_CALL: Lazy<Regex> =
 // Sub-pattern untuk ekstrak setiap string literal di dalam call args
 static RE_STRING_ARG: Lazy<Regex> = Lazy::new(|| Regex::new(r#"["']([^"']+)["']"#).unwrap());
 
-pub(crate) fn extract_classes_regex(source: &str) -> Vec<String> {
-    let mut raw: Vec<String> = Vec::new();
+/// Splits `s` on whitespace like `str::split_whitespace()`, but also yields
+/// each token's byte offset within `s`. Used to compute absolute source
+/// positions for classes found inside a larger regex capture group (e.g.
+/// `className="flex items-center"` — need the offset of "items-center"
+/// specifically, not just the whole attribute).
+fn split_whitespace_with_offsets(s: &str) -> impl Iterator<Item = (usize, &str)> {
+    let mut idx = 0;
+    s.split_whitespace().map(move |tok| {
+        // Safe: tokens from split_whitespace() on `s` always appear in order
+        // and don't overlap, so searching from the last end position always
+        // finds the correct occurrence of `tok`, not an earlier coincidental
+        // match of the same substring.
+        let start = s[idx..].find(tok).map(|p| p + idx).unwrap_or(idx);
+        idx = start + tok.len();
+        (start, tok)
+    })
+}
 
-    let push = |raw: &mut Vec<String>, s: &str| {
-        for t in s.split_whitespace() {
+/// Converts a byte offset into 1-indexed (line, column) against `source`.
+/// Column counted in UTF-8 bytes since last newline + 1 — close enough for
+/// ASCII/most source; not UTF-16/grapheme-exact like an editor LSP.
+fn line_col_at(source: &str, byte_offset: usize) -> (u32, u32) {
+    let offset = byte_offset.min(source.len());
+    let mut line: u32 = 1;
+    let mut last_newline = 0usize;
+    for (i, b) in source.as_bytes()[..offset].iter().enumerate() {
+        if *b == b'\n' {
+            line += 1;
+            last_newline = i + 1;
+        }
+    }
+    (line, (offset - last_newline + 1) as u32)
+}
+
+pub(crate) fn extract_classes_regex(source: &str) -> Vec<String> {
+    extract_classes_regex_with_positions(source)
+        .into_iter()
+        .map(|(class, _, _)| class)
+        .collect()
+}
+
+/// Same extraction as `extract_classes_regex`, but also returns each class's
+/// 1-indexed (line, column) — the FIRST occurrence's position if a class
+/// string appears more than once in the file. Used to populate
+/// `CssRule.source` when compiling (see `compileClassesWithSource` on the
+/// TS side / `AGENT.md` gap #4).
+pub(crate) fn extract_classes_regex_with_positions(source: &str) -> Vec<(String, u32, u32)> {
+    let mut raw: Vec<(String, u32, u32)> = Vec::new();
+
+    let mut push = |raw: &mut Vec<(String, u32, u32)>, content: &str, group_start: usize| {
+        for (rel_offset, t) in split_whitespace_with_offsets(content) {
             let t = t.trim();
             if !t.is_empty() && !t.ends_with('{') && t != "}" {
-                raw.push(t.to_string());
+                let (line, col) = line_col_at(source, group_start + rel_offset);
+                raw.push((t.to_string(), line, col));
             }
         }
     };
 
     // tw.div`classes` dan tw.server.div`classes`
     for cap in RE_TW_TEMPLATE.captures_iter(source) {
-        let content = &cap[1];
+        let group = cap.get(1).unwrap();
+        let content = group.as_str();
         // Skip dynamic (${...})
         if !content.contains("${") {
-            push(&mut raw, content);
+            push(&mut raw, content, group.start());
         }
     }
 
     // tw(Component)`classes`
     for cap in RE_TW_WRAP.captures_iter(source) {
-        let content = &cap[1];
+        let group = cap.get(1).unwrap();
+        let content = group.as_str();
         if !content.contains("${") {
-            push(&mut raw, content);
+            push(&mut raw, content, group.start());
         }
     }
 
     // base: "classes"
     for cap in RE_BASE_FIELD.captures_iter(source) {
-        push(&mut raw, &cap[1]);
+        let group = cap.get(1).unwrap();
+        push(&mut raw, group.as_str(), group.start());
     }
 
     // variant leaf values (heuristic — ambil string pendek di dalam objek)
     for cap in RE_VARIANTS_LEAF.captures_iter(source) {
-        let val = &cap[1];
+        let group = cap.get(1).unwrap();
+        let val = group.as_str();
         // Hanya ambil jika terlihat seperti kumpulan kelas Tailwind
         if val.len() < 200 && (val.contains('-') || val.contains(':')) {
-            push(&mut raw, val);
+            push(&mut raw, val, group.start());
         }
     }
 
     // className="classes" dan class="classes"
     for cap in RE_CLASSNAME.captures_iter(source) {
-        push(&mut raw, &cap[1]);
+        let group = cap.get(1).unwrap();
+        push(&mut raw, group.as_str(), group.start());
     }
 
     // cx("a", "b") / cn("a", "b") / clsx("a", "b") / twMerge("a", "b")
     // RE_CX_CALL menangkap seluruh call, RE_STRING_ARG ekstrak tiap string arg
     for call_cap in RE_CX_CALL.captures_iter(source) {
-        let call_text = &call_cap[0];
+        let call_group = call_cap.get(0).unwrap();
+        let call_text = call_group.as_str();
         for str_cap in RE_STRING_ARG.captures_iter(call_text) {
-            push(&mut raw, &str_cap[1]);
+            let str_group = str_cap.get(1).unwrap();
+            // Offset relatif ke `call_text`, harus ditambah offset awal call
+            // di `source` biar jadi absolute.
+            push(&mut raw, str_group.as_str(), call_group.start() + str_group.start());
         }
     }
 
@@ -509,20 +579,31 @@ pub fn extract_classes_oxc(source: &str, filename: &str) -> OxcExtractResult {
     }
 
     // Pass 2: Regex class extraction — proven, handles mixed JSX + templates
-    let raw_classes = extract_classes_regex(source);
+    let raw_classes_with_pos = extract_classes_regex_with_positions(source);
 
     // Text-level has_tw_usage detection
     let has_tw_usage = source.contains("tw.")
         || source.contains("from \"tailwind-styled")
         || source.contains("from 'tailwind-styled");
 
-    // Dedup + filter
+    // Dedup + filter — keep FIRST occurrence's position per unique class.
     let mut seen = std::collections::HashSet::new();
-    let mut classes: Vec<String> = raw_classes
-        .into_iter()
-        .filter(|c| is_tw_class(c) && seen.insert(c.clone()))
-        .collect();
+    let mut classes: Vec<String> = Vec::new();
+    let mut class_positions: Vec<ClassOccurrence> = Vec::new();
+    for (class_name, line, column) in raw_classes_with_pos {
+        if is_tw_class(&class_name) && seen.insert(class_name.clone()) {
+            class_positions.push(ClassOccurrence {
+                class_name: class_name.clone(),
+                line,
+                column,
+            });
+            classes.push(class_name);
+        }
+    }
     classes.sort();
+    // `class_positions` intentionally NOT sorted the same way — kept in
+    // source-appearance order, which is more useful for "where did this
+    // come from" lookups than alphabetical order.
 
     OxcExtractResult {
         classes,
@@ -532,5 +613,6 @@ pub fn extract_classes_oxc(source: &str, filename: &str) -> OxcExtractResult {
         imports,
         dynamic_props,
         parse_errors,
+        class_positions,
     }
 }

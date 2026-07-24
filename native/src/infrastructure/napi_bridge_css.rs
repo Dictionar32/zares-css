@@ -128,8 +128,20 @@ pub fn generate_css_batch(rules_json: String, minify: Option<bool>) -> napi::Res
 /// Compile class to CSS (full pipeline)
 ///
 /// Full pipeline: parse → resolve → generate CSS
+///
+/// `file`/`line`/`column` (semua opsional, default `None`) — kalau
+/// disediakan, dipakai buat isi `CssRule.source` sehingga output CSS bisa
+/// menyertakan comment source location (lihat `build_css_string`). Additive:
+/// caller lama yang cuma kirim `(input, minify)` tetap jalan persis sama,
+/// `source` cuma `None` seperti sebelumnya.
 #[napi]
-pub fn compile_to_css(input: String, minify: Option<bool>) -> napi::Result<String> {
+pub fn compile_to_css(
+    input: String,
+    minify: Option<bool>,
+    file: Option<String>,
+    line: Option<u32>,
+    column: Option<u32>,
+) -> napi::Result<String> {
     use crate::application::class_parser::ClassParser;
     use crate::application::theme_resolver::ThemeResolver;
     
@@ -137,10 +149,17 @@ pub fn compile_to_css(input: String, minify: Option<bool>) -> napi::Result<Strin
     let cache = CSS_GEN_CACHE.get().unwrap();
     
     let minify_css = minify.unwrap_or(false);
+    // Sertakan file/line/column di cache key — tanpa ini, dua panggilan
+    // dengan `input` yang sama tapi source location beda akan salah ambil
+    // hasil cache dari source location yang lain (stale source comment).
+    let source_key = match (&file, line, column) {
+        (Some(f), Some(l), Some(c)) => format!(":src={f}:{l}:{c}"),
+        _ => String::new(),
+    };
     let cache_key = if minify_css {
-        format!("{}:minified", input)
+        format!("{input}{source_key}:minified")
     } else {
-        format!("{}:raw", input)
+        format!("{input}{source_key}:raw")
     };
 
     // Check cache first
@@ -170,14 +189,63 @@ pub fn compile_to_css(input: String, minify: Option<bool>) -> napi::Result<Strin
         _ => parsed.value.clone(),
     };
 
+    // Klasifikasi tiap variant (hover, md, dark, dst) jadi pseudo-class
+    // atau media query. Sebelumnya field ini selalu `None` — variant yang
+    // sudah di-parse oleh ClassParser (parsed.variants) tidak pernah dipakai
+    // di sini, jadi CSS untuk class seperti "hover:bg-blue-500" ke-generate
+    // tanpa ":hover" beneran nempel, dan "md:px-4" tanpa "@media" — bug yang
+    // sudah lama ada, bukan regresi dari perubahan ini.
+    let variant_resolver = crate::application::variant_resolver::VariantResolver::new(
+        crate::domain::theme_config::ThemeConfig::default(),
+    );
+
+    let mut pseudo: Option<String> = None;
+    let mut media: Option<String> = None;
+
+    for v in &parsed.variants {
+        if let Ok(state) = variant_resolver.resolve_state(v.name()) {
+            // Multiple state variants (mis. "hover:focus:bg-blue-500")
+            // digabung berurutan: ":hover:focus". Ini benar secara CSS
+            // untuk kombinasi pseudo-class.
+            pseudo = Some(format!("{}{}", pseudo.unwrap_or_default(), state));
+        } else if let Ok(mq) = variant_resolver.resolve_responsive(v.name()) {
+            // NOTE: hanya menyimpan SATU media query — kombinasi
+            // "md:dark:..." (nested media) tidak didukung struct CssRule
+            // saat ini (`media: Option<String>`, bukan `Vec<String>`).
+            // Kalau butuh nested media, CssRule perlu diperluas dulu
+            // (lihat domain::css_rule::CssRule yang sudah punya
+            // `media_queries: Vec<String>` untuk kasus ini).
+            media = Some(mq);
+        } else if v.name() == "dark" {
+            let dark = variant_resolver.resolve_dark_mode();
+            if dark.starts_with('@') {
+                media = Some(dark);
+            } else {
+                // Class-strategy dark mode (".dark") perlu jadi prefix
+                // selector (".dark .foo"), bukan pseudo/media — di luar
+                // scope minimal fix ini karena butuh ubah escape_selector
+                // juga. Untuk sekarang: dicatat sebagai pseudo agar tidak
+                // hilang diam-diam, meski secara CSS kurang tepat 100%.
+                pseudo = Some(format!("{}{}", pseudo.unwrap_or_default(), dark));
+            }
+        }
+        // Variant yang tidak dikenali (group-*, peer-*, custom) sengaja
+        // di-skip untuk sekarang — jangan silently guess, biarkan
+        // property/value tetap benar walau variant itu belum ke-apply.
+    }
+
     // Build CSS rule
     let rule = CssRule {
         selector: escape_selector(&input),
         property: property_for_prefix(&parsed.prefix),
         value: resolved_value,
-        media: None,
-        pseudo: None,
-        source: None,
+        media,
+        pseudo,
+        source: file.map(|f| crate::infrastructure::napi_bridge_types::SourceLocation {
+            file: f,
+            line: line.unwrap_or(0),
+            column: column.unwrap_or(0),
+        }),
     };
 
     let css = build_css_string(&rule, minify_css);
@@ -189,15 +257,48 @@ pub fn compile_to_css(input: String, minify: Option<bool>) -> napi::Result<Strin
 }
 
 /// Compile multiple classes to CSS (batch)
+/// Batch version of `compile_to_css`.
+///
+/// `sources` (opsional) — kalau disediakan, HARUS sama panjang dengan
+/// `inputs`; index ke-N di `sources` (boleh `None` per-item) dipasangkan ke
+/// `inputs[N]`. Additive: caller lama yang cuma kirim `(inputs, minify)`
+/// tetap jalan, semua rule dapet `source: None` seperti sebelumnya.
 #[napi]
-pub fn compile_to_css_batch(inputs: Vec<String>, minify: Option<bool>) -> napi::Result<String> {
+pub fn compile_to_css_batch(
+    inputs: Vec<String>,
+    minify: Option<bool>,
+    sources: Option<Vec<Option<crate::infrastructure::napi_bridge_types::SourceLocation>>>,
+) -> napi::Result<String> {
     use rayon::prelude::*;
 
     let minify_css = minify.unwrap_or(false);
-    
+
+    if let Some(ref s) = sources {
+        if s.len() != inputs.len() {
+            return Err(napi::Error::from_reason(format!(
+                "compile_to_css_batch: sources.len() ({}) must match inputs.len() ({}) when provided",
+                s.len(),
+                inputs.len()
+            )));
+        }
+    }
+
     let results: Result<Vec<String>, napi::Error> = inputs
         .par_iter()
-        .map(|input| compile_to_css(input.clone(), Some(minify_css)))
+        .enumerate()
+        .map(|(i, input)| {
+            let src = sources.as_ref().and_then(|s| s[i].clone());
+            match src {
+                Some(loc) => compile_to_css(
+                    input.clone(),
+                    Some(minify_css),
+                    Some(loc.file),
+                    Some(loc.line),
+                    Some(loc.column),
+                ),
+                None => compile_to_css(input.clone(), Some(minify_css), None, None, None),
+            }
+        })
         .collect();
 
     let css_strings = results?;
@@ -243,7 +344,13 @@ pub fn minify_css(css: String) -> napi::Result<String> {
 
 /// Build CSS string from rule
 fn build_css_string(rule: &CssRule, minify: bool) -> String {
-    let selector = &rule.selector;
+    // `pseudo` sebelumnya nggak pernah dibaca di sini — field-nya ada di
+    // struct tapi dead. Sekarang dilekatkan ke selector, mis.
+    // ".hover\:bg-blue-500" + ":hover" → ".hover\:bg-blue-500:hover".
+    let selector = match &rule.pseudo {
+        Some(p) => format!("{}{}", rule.selector, p),
+        None => rule.selector.clone(),
+    };
     let property = &rule.property;
     let value = &rule.value;
 

@@ -70,6 +70,10 @@ Thumbs.db
 coverage/
 .nyc_output/
 
+# Kilo CLI config (contains API keys / project-specific config)
+kilo.json
+.kilo
+
 # Environment files
 .env
 .env.local
@@ -84,7 +88,6 @@ SUPPORT.md
 SETUP.md
 RELEASE.md
 .cache
-.kilo
 ANNOUNCEMENT.md
 CHANGELOG.md
 CONTRIBUTING.md

@@ -98,6 +98,43 @@ export interface DiagnosticsReport {
   recommendations: string[]
 }
 
+export interface WatchSystemStatus {
+  is_running: boolean
+  active_handles: number
+  events_processed: number
+  events_dropped: number
+  files_watched: number
+}
+
+export interface Week8OptimizationStatus {
+  status: string
+  memory_stats: {
+    current_usage_mb: number
+    peak_usage_mb: number
+    total_allocated_mb: number
+    efficiency_percent: number
+    cache_layers: {
+      parse_cache_mb: number
+      resolve_cache_mb: number
+      compile_cache_mb: number
+      lazy_cache_mb: number
+      streaming_buffer_mb: number
+      adaptive_metadata_mb: number
+    }
+  }
+  recommendations_count: number
+  features: Record<string, unknown>
+}
+
+export interface CacheInspectionResult {
+  hits: number
+  misses: number
+  current_size: number
+  capacity: number
+  evictions: number
+  hit_rate: number
+}
+
 // ── REDIS CACHE FUNCTIONS (40 total) ────────────────────────────────────────
 
 /**
@@ -1605,6 +1642,13 @@ export const clear_parse_cache_napi = (): void => {
   safeCallNative("clearParseCacheNapi", () => bridge.clearParseCacheNapi!())
 }
 
+/** Clear the theme resolution cache. */
+export const clear_theme_cache_napi = (): void => {
+  const bridge = getNativeBridge()
+  if (!bridge.clearThemeCacheNapi) throw new Error("clearThemeCacheNapi not available")
+  safeCallNative("clearThemeCacheNapi", () => bridge.clearThemeCacheNapi!())
+}
+
 // ── WATCH WRAPPERS (infrastructure) ──────────────────────────────────────────
 
 /**
@@ -1997,4 +2041,28 @@ export const reset_cache_stats = (): void => {
   const bridge = getNativeBridge()
   if (!bridge.resetCacheStats) throw new Error("resetCacheStats not available")
   safeCallNative("resetCacheStats", () => bridge.resetCacheStats!())
+}
+
+/** Get watch system status */
+export const get_watch_system_status = (): WatchSystemStatus => {
+  const bridge = getNativeBridge()
+  if (!bridge.getWatchSystemStatus) throw new Error("getWatchSystemStatus not available")
+  const result = safeCallNative("getWatchSystemStatus", () => bridge.getWatchSystemStatus!())
+  return parseNativeJson<WatchSystemStatus>(result, "getWatchSystemStatus")
+}
+
+/** Get Week 8 memory optimization status */
+export const get_week8_optimization_status = (): Week8OptimizationStatus => {
+  const bridge = getNativeBridge()
+  if (!bridge.getWeek8OptimizationStatus) throw new Error("getWeek8OptimizationStatus not available")
+  const result = safeCallNative("getWeek8OptimizationStatus", () => bridge.getWeek8OptimizationStatus!())
+  return parseNativeJson<Week8OptimizationStatus>(result, "getWeek8OptimizationStatus")
+}
+
+/** Inspect cache statistics for a given capacity */
+export const inspect_cache_stats = (capacity: number): CacheInspectionResult => {
+  const bridge = getNativeBridge()
+  if (!bridge.inspectCacheStats) throw new Error("inspectCacheStats not available")
+  const result = safeCallNative("inspectCacheStats", () => bridge.inspectCacheStats!(capacity))
+  return parseNativeJson<CacheInspectionResult>(result, "inspectCacheStats")
 }

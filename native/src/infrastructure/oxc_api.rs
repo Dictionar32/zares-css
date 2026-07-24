@@ -39,6 +39,24 @@ impl From<oxc_parser::DynamicPropUsage> for OxcDynamicPropUsage {
 
 #[napi(object)]
 #[derive(Serialize, Deserialize, JsonSchema)]
+pub struct OxcClassPosition {
+    pub class_name: String,
+    pub line: u32,
+    pub column: u32,
+}
+
+impl From<oxc_parser::ClassOccurrence> for OxcClassPosition {
+    fn from(c: oxc_parser::ClassOccurrence) -> Self {
+        Self {
+            class_name: c.class_name,
+            line: c.line,
+            column: c.column,
+        }
+    }
+}
+
+#[napi(object)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub struct OxcExtractResult {
     pub classes: Vec<String>,
     pub component_names: Vec<String>,
@@ -51,6 +69,12 @@ pub struct OxcExtractResult {
     /// `oxc_parser::OxcExtractResult::parse_errors` for what this implies
     /// about the other fields on this struct (they may be incomplete).
     pub parse_errors: Vec<String>,
+    /// First-occurrence (line, column) per unique entry in `classes`. Feed
+    /// this into `compileToCss(class, minify, {file, line, column})` /
+    /// `compileToCssBatch(..., sources)` to get source-location comments in
+    /// generated CSS — see `compileClassesWithSource` in the compiler
+    /// package for a ready-made helper that does exactly this.
+    pub class_positions: Vec<OxcClassPosition>,
 }
 
 /// Extract Tailwind classes using real Oxc AST parser.
@@ -68,6 +92,7 @@ pub fn oxc_extract_classes(source: String, filename: String) -> OxcExtractResult
         engine: "oxc".to_string(),
         dynamic_props: r.dynamic_props.into_iter().map(Into::into).collect(),
         parse_errors: r.parse_errors,
+        class_positions: r.class_positions.into_iter().map(Into::into).collect(),
     }
 }
 

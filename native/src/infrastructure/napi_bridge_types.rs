@@ -3,6 +3,7 @@
 //! This module contains all shared types used across the NAPI bridge modules.
 //! Extracted from monolithic napi_bridge.rs as part of Phase 7.3 modularization.
 
+use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 
 /// Represents a CSS rule for generation
@@ -37,6 +38,7 @@ pub struct ParseResult {
 }
 
 /// Source location for debugging
+#[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SourceLocation {
     /// Source file path

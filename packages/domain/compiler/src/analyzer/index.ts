@@ -39,6 +39,13 @@ export {
 } from './analyzerNative'
 
 export {
+  get_week8_optimization_status,
+  inspect_cache_stats,
+  type Week8OptimizationStatus,
+  type CacheInspectionResult,
+} from '../nativeBridgeWrappers'
+
+export {
   resolveVariants,
   validateThemeConfig,
   resolveCascade,

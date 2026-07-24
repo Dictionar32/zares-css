@@ -807,3 +807,6 @@ export async function inspectClass(
     bundleBytes: impact.bundleSizeBytes,
   }
 }
+
+// ID Registry diagnostics
+export { clearNameRegistries, getIdRegistryActiveCount } from "./native-bridge"

@@ -100,6 +100,16 @@ impl<K: Clone + Eq + std::hash::Hash, V: Clone> AdaptiveCache<K, V> {
         self.hits.store(0, Ordering::Relaxed);
         self.misses.store(0, Ordering::Relaxed);
     }
+
+    pub fn remove(&self, key: &K) -> bool {
+        let mut cache = self.cache.lock().unwrap();
+        cache.remove(key).is_some()
+    }
+
+    pub fn contains(&self, key: &K) -> bool {
+        let cache = self.cache.lock().unwrap();
+        cache.contains_key(key)
+    }
 }
 
 #[derive(Debug, Clone)]

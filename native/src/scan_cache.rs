@@ -16,9 +16,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub struct CacheEntry {
     pub classes: Vec<String>,
     pub content_hash: String,
-    #[allow(dead_code)]
     pub mtime_ms: f64,
-    #[allow(dead_code)]
     pub size: u32,
     pub hit_count: u32,
     pub last_seen_ms: f64,
@@ -76,7 +74,6 @@ pub fn cache_size() -> usize {
 
 /// Priority score for a file — higher = process first.
 /// Same formula as SmartCache JS but computed in Rust.
-#[allow(dead_code)]
 pub fn priority_score(mtime_ms: f64, size: u32, cached: Option<&CacheEntry>, now: f64) -> f64 {
     let Some(c) = cached else {
         return 1_000_000_000.0;
@@ -93,7 +90,6 @@ pub fn priority_score(mtime_ms: f64, size: u32, cached: Option<&CacheEntry>, now
 
 /// Dump all entries as (path, classes, hash, mtime_ms, size, hit_count) tuples.
 /// Used by cache_write to persist to disk.
-#[allow(dead_code)]
 pub fn cache_dump() -> Vec<(String, CacheEntry)> {
     SCAN_CACHE
         .iter()
@@ -102,7 +98,6 @@ pub fn cache_dump() -> Vec<(String, CacheEntry)> {
 }
 
 /// Load entries from disk back into the in-memory cache.
-#[allow(dead_code)]
 pub fn cache_load(entries: Vec<(String, String, Vec<String>, f64, u32, u32)>) {
     for (path, hash, classes, mtime_ms, size, hit_count) in entries {
         SCAN_CACHE.insert(

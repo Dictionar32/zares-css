@@ -89,7 +89,6 @@ impl CssRule {
     /// }
     /// ```
     pub fn to_css_string(&self) -> String {
-        // Format declarations
         let declarations_str = self
             .declarations
             .iter()
@@ -97,14 +96,8 @@ impl CssRule {
             .collect::<Vec<_>>()
             .join("\n");
 
-        // Build inner rule
         let inner = format!("{} {{\n{}\n}}", self.selector, declarations_str);
-
-        // Nest within media queries if present (reverse order for proper nesting)
-        self.media_queries
-            .iter()
-            .rev()
-            .fold(inner, |acc, mq| format!("{} {{\n{}\n}}", mq, acc))
+        self.nest_media_queries(inner)
     }
 
     /// Get number of declarations
@@ -127,12 +120,15 @@ impl CssRule {
             .join("");
 
         let inner = format!("{}{{{}}}", self.selector, declarations_str);
+        self.nest_media_queries(inner)
+    }
 
-        // Nest within media queries if present
+    /// Nest the given CSS block inside media queries (reverse order for proper nesting)
+    fn nest_media_queries(&self, inner: String) -> String {
         self.media_queries
             .iter()
             .rev()
-            .fold(inner, |acc, mq| format!("{}{{{}}}", mq, acc))
+            .fold(inner, |acc, mq| format!("{} {{\n{}\n}}", mq, acc))
     }
 
     /// Calculate specificity from selector

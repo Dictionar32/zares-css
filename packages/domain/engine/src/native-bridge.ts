@@ -391,3 +391,6 @@ export function getIdRegistryActiveCount(): number {
 export function getIdRegistryActiveCount(): number {
   return getNativeEngineBinding().idRegistryActiveCount?.() ?? 0
 }
+export function clearNameRegistries(): void {
+  getNativeEngineBinding().clearNameRegistries?.()
+}

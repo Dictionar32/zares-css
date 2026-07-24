@@ -405,6 +405,14 @@ fn parse_dynamic_token(token: &str, comp: &str, sub: Option<&str>) -> Option<(St
     Some((class_name, css_rule, raw_expr))
 }
 
+/// Check if template content contains dynamic expressions that couldn't be
+/// resolved into static class tokens. If the original content has `${` but
+/// the resolved content still has `${`, it means there are unparseable JS
+/// expressions (e.g. arrow functions) and the template must be skipped.
+fn has_unparseable_dynamic_expressions(original: &str, resolved: &str) -> bool {
+    original.contains("${") && resolved.contains("${")
+}
+
 /// Process a raw (pre-normalised) class string: static tokens pass through
 /// untouched, dynamic `${...}` tokens are rewritten into their scoped class
 /// name; their generated CSS rule is pushed into `out_css`, and their
@@ -1045,6 +1053,10 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
                         &mut comp_dyn_props,
                     );
 
+                    if has_unparseable_dynamic_expressions(&tmpl.content, &resolved_content) {
+                        continue;
+                    }
+
                     let (base_content, sub_comps) =
                         parse_subcomponent_blocks(&resolved_content, &comp_name);
                     let base_classes_vec = normalise_classes(&base_content);
@@ -1133,6 +1145,10 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
                     &mut comp_dyn_props,
                 );
 
+                if has_unparseable_dynamic_expressions(&content, &resolved_content) {
+                    continue;
+                }
+
                 let (base_content, sub_comps) = parse_subcomponent_blocks(&resolved_content, &comp_name);
 
                 let base_classes_vec = normalise_classes(&base_content);
@@ -1203,6 +1219,10 @@ pub fn transform_source(source: String, opts: Option<HashMap<String, String>>) -
                 &mut dynamic_css,
                 &mut comp_dyn_props,
             );
+
+            if has_unparseable_dynamic_expressions(&content, &resolved_content) {
+                continue;
+            }
 
             let extra = normalise_classes(&resolved_content).join(" ");
             all_classes.extend(extra.split_whitespace().map(String::from));

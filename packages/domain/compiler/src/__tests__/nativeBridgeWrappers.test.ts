@@ -106,6 +106,12 @@ import {
   to_atomic_classes,
   clear_atomic_registry,
   get_atomic_registry_size,
+  // Cache Management Functions
+  clear_parse_cache_napi,
+  clear_theme_cache_napi,
+  get_watch_system_status,
+  get_week8_optimization_status,
+  inspect_cache_stats,
   // Analysis Functions (8)
   analyze_class_usage,
   calculate_impact,
@@ -119,6 +125,9 @@ import {
   type ReplicationStatus,
   type MemoryStats,
   type DiagnosticsReport,
+  type WatchSystemStatus,
+  type Week8OptimizationStatus,
+  type CacheInspectionResult,
 } from "../nativeBridgeWrappers"
 
 describe("NativeBridge Wrappers - All 63 Rust Functions", () => {
@@ -342,6 +351,28 @@ describe("NativeBridge Wrappers - All 63 Rust Functions", () => {
       analysisFunctions.forEach((fn) => {
         expect(typeof fn).toBe("function")
       })
+    })
+  })
+
+  describe("Cache Management Wrappers", () => {
+    it("should export clear_parse_cache_napi", () => {
+      expect(typeof clear_parse_cache_napi).toBe("function")
+    })
+
+    it("should export clear_theme_cache_napi", () => {
+      expect(typeof clear_theme_cache_napi).toBe("function")
+    })
+
+    it("should export get_watch_system_status", () => {
+      expect(typeof get_watch_system_status).toBe("function")
+    })
+
+    it("should export get_week8_optimization_status", () => {
+      expect(typeof get_week8_optimization_status).toBe("function")
+    })
+
+    it("should export inspect_cache_stats", () => {
+      expect(typeof inspect_cache_stats).toBe("function")
     })
   })
 

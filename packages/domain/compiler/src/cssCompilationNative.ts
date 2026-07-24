@@ -125,6 +125,9 @@ export function compileClasses(inputs: string[]): CssCompileResult {
  *
  * @param input - Single Tailwind class
  * @param minify - Whether to minify output (default: false)
+ * @param source - Opsional: posisi asal class ini (file/line/column),
+ *   dipakai buat isi source-location comment di output CSS. Kalau nggak
+ *   dikasih, behavior persis sama seperti sebelum parameter ini ada.
  * @returns Generated CSS string
  *
  * @example
@@ -134,12 +137,24 @@ export function compileClasses(inputs: string[]): CssCompileResult {
  *
  * const minified = compileToCss('bg-blue-600', true)
  * // Returns: ".bg-blue-600{background-color:#2563eb}"
+ *
+ * const withSource = compileToCss('bg-blue-600', false, { file: 'Card.tsx', line: 12, column: 5 })
  * ```
  */
-export function compileToCss(input: string, minify?: boolean): string {
+export function compileToCss(
+  input: string,
+  minify?: boolean,
+  source?: { file: string; line: number; column: number }
+): string {
   const native = getNativeBridge()
   if (!native?.compile_to_css) throw new Error("compile_to_css not available")
-  return native.compile_to_css(input, minify ?? false)
+  return native.compile_to_css(
+    input,
+    minify ?? false,
+    source?.file,
+    source?.line,
+    source?.column
+  )
 }
 
 /**
@@ -148,6 +163,9 @@ export function compileToCss(input: string, minify?: boolean): string {
  *
  * @param inputs - Array of Tailwind classes
  * @param minify - Whether to minify output
+ * @param sources - Opsional: posisi asal tiap class di `inputs`, HARUS
+ *   sama panjang dengan `inputs` kalau disediakan (item boleh `undefined`
+ *   per-index kalau class itu nggak punya source location).
  * @returns Combined CSS string
  *
  * @example
@@ -155,10 +173,14 @@ export function compileToCss(input: string, minify?: boolean): string {
  * const css = compileToCssBatch(['px-4', 'bg-blue-600'], true)
  * ```
  */
-export function compileToCssBatch(inputs: string[], minify?: boolean): string {
+export function compileToCssBatch(
+  inputs: string[],
+  minify?: boolean,
+  sources?: Array<{ file: string; line: number; column: number } | undefined>
+): string {
   const native = getNativeBridge()
   if (!native?.compile_to_css_batch) throw new Error("compile_to_css_batch not available")
-  return native.compile_to_css_batch(inputs, minify ?? false)
+  return native.compile_to_css_batch(inputs, minify ?? false, sources)
 }
 
 /**

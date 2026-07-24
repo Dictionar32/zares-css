@@ -282,8 +282,18 @@ export interface NativeBridge {
   generate_css_batch?: (rules_json: string, minify?: boolean | null) => string
   compile_class?: (input: string) => string  // Returns JSON
   compile_classes?: (inputs: string[]) => string  // Returns JSON
-  compile_to_css?: (input: string, minify: boolean) => string
-  compile_to_css_batch?: (inputs: string[], minify: boolean) => string
+  compile_to_css?: (
+    input: string,
+    minify: boolean,
+    file?: string,
+    line?: number,
+    column?: number
+  ) => string
+  compile_to_css_batch?: (
+    inputs: string[],
+    minify: boolean,
+    sources?: Array<{ file: string; line: number; column: number } | undefined>
+  ) => string
   minify_css?: (css: string) => string
   compile_animation?: (animationName: string, from: string, to: string) => string  // Returns JSON
   compile_keyframes?: (name: string, stopsJson: string) => string  // Returns JSON
@@ -390,6 +400,7 @@ export interface NativeBridge {
   resetResolverPoolStats?: () => void
   getCacheOptimizationHints?: () => string
   estimateStreamingBatchSize?: (targetMemoryMb: number) => string
+  clearThemeCacheNapi?: () => void
 
   // ── Parsing (napi_bridge_parsing.rs) ──────────────────────────────────────
   parseClass?: (input: string) => string
@@ -417,6 +428,7 @@ export interface NativeBridge {
   getActiveWatches?: () => number
   setWatchMetrics?: (metricName: string, value: string) => string
   setWatchAggregation?: (aggregationType: string) => string
+  getWatchSystemStatus?: () => string
 
   // ── Week 6 Optimization (week6_api.rs) ────────────────────────────────────
   getOptimizationRecommendations?: (hitRate: number, memoryMb: number, classCount: number) => string
@@ -432,6 +444,10 @@ export interface NativeBridge {
   getMemoryRecommendationsNative?: () => string
   estimateOptimalCacheConfigNative?: (workloadType: string, expectedEntries: number) => string
   resetMemoryStats?: () => void
+  getWeek8OptimizationStatus?: () => string
+
+  // ── Cache Inspection (napi_bridge_cache.rs) ────────────────────────────────
+  inspectCacheStats?: (capacity: number) => string
 
   // ── Scan Cache (scan_cache_api.rs) ────────────────────────────────────────
   scanCacheGet?: (filePath: string, contentHash: string) => string[] | null
@@ -719,4 +735,9 @@ export {
   get_memory_recommendations_native,
   estimate_optimal_cache_config_native,
   reset_memory_stats,
+  clear_parse_cache_napi,
+  clear_theme_cache_napi,
+  get_watch_system_status,
+  get_week8_optimization_status,
+  inspect_cache_stats,
 } from "./nativeBridgeWrappers"

@@ -31,3 +31,9 @@ export {
   type CacheStatistics,
   type ResolverPoolStatsResult,
 } from './cacheNative'
+
+export {
+  clear_parse_cache_napi,
+  clear_theme_cache_napi,
+  type ParseStatsResult,
+} from '../nativeBridgeWrappers'

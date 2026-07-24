@@ -3,13 +3,8 @@
 
 use napi_derive::napi;
 use napi::bindgen_prelude::*;
-use regex::Regex;
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
-
-static WHITESPACE_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\s+").unwrap()
-});
 
 #[napi(object)]
 pub struct CompiledAnimation {
@@ -118,11 +113,7 @@ pub fn compile_keyframes(
 /// Uses simple whitespace splitting - no regex overhead.
 #[napi]
 pub fn split_animate_classes(class_list: String) -> Vec<String> {
-    WHITESPACE_RE
-        .split(&class_list)
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string())
-        .collect()
+    class_list.split_whitespace().map(|s| s.to_string()).collect()
 }
 
 fn normalize_classes(class_list: &str) -> String {
@@ -174,11 +165,10 @@ fn build_animation_css(
 }
 
 fn generate_id() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
     let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
     format!("{:x}", nanos)
 }
 

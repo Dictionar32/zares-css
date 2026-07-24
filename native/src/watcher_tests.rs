@@ -18,12 +18,14 @@ mod tests {
         let events = Arc::new(Mutex::new(Vec::<WatchEvent>::new()));
         let events_clone = Arc::clone(&events);
 
-        // Watch a directory that actually exists
-        let handle = start_watch("/tmp", move |ev| {
+        let tmp_dir = tempfile::TempDir::new().expect("create temp dir");
+        let watch_path = tmp_dir.path().to_str().expect("valid temp path");
+
+        let handle = start_watch(watch_path, move |ev| {
             events_clone.lock().unwrap().push(ev);
         });
 
-        assert!(handle.is_ok(), "watcher should start on /tmp");
+        assert!(handle.is_ok(), "watcher should start on {}", watch_path);
         // handle drop stops the watcher
     }
 }

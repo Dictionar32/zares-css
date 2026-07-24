@@ -6,8 +6,10 @@ native/target
 build.log
 .cache
 .turbo
+# Kilo CLI config (contains API keys)
+kilo.json
 .kilo
-.claude/
+.kilocode
 
 # IDE
 .vscode/

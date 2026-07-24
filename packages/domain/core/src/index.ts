@@ -47,6 +47,7 @@ export { createTwMerge, mergeWithRules, twMerge } from "./merge"
 // Import from "zares-css/native" instead of the main bundle.
 // This prevents fs/node built-ins from leaking into browser bundles.
 export type { ParsedClass, ParsedClassModifier, ThemeConfig } from "./native"
+export { extractThemeFromCss } from "./native"
 export type { SubComponentEntry, SubComponentProps } from "./registry"
 // ── Sub-Component Registry ───────────────────────────────────────────────────
 export {

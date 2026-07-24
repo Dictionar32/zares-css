@@ -291,6 +291,24 @@ impl RedisDistributedCache {
         }
     }
 
+    /// Clear key version cache and flush all Redis pools
+    pub fn clear(&mut self) {
+        self.key_version_cache.clear();
+        for (_, pool) in &mut self.pools {
+            let _ = pool.flush_db();
+        }
+    }
+
+    /// Get number of tracked keys
+    pub fn len(&self) -> usize {
+        self.key_version_cache.len()
+    }
+
+    /// Check if cache is empty
+    pub fn is_empty(&self) -> bool {
+        self.key_version_cache.is_empty()
+    }
+
     /// Get version metadata for a cached key
     ///
     /// Returns `(version, timestamp, region)` if the key has been written via `put()`.
