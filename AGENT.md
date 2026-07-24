@@ -197,3 +197,94 @@ Yang sudah ada dan **lulus test** (`cargo test oxc_parser` — 17/17):
   method yang udah kebukti jalan (`Display`/`{}` daripada akses field
   spesifik), atau generic function, atau langsung declare butuh verifikasi
   manual di environment yang toolchain-nya lengkap.
+
+## Perubahan lanjutan (2026-07-24) — setelah fondasi dynamic props
+
+### 1. Rust — Cache Backend Upgrade
+- `native/src/infrastructure/adapters.rs` — tambah `LazyCacheAdapter` dengan
+  timeout-based expiration, `StringKeyedAdaptiveCache` wrapping
+  `AdaptiveCache<String, String>`, dan `DistributedCacheAdapter` wrapping
+  `RedisDistributedCache`.
+- `native/src/infrastructure/cache_backend.rs` — `CacheConfig::Lazy` sekarang
+  memakai `LazyCacheAdapter`, `CacheConfig::Adaptive` memakai
+  `StringKeyedAdaptiveCache` dengan `max_capacity`, `CacheConfig::Distributed`
+  memakai `DistributedCacheAdapter`.
+- `native/src/infrastructure/adaptive_cache.rs` — tambah `remove(key: &K) -> bool`
+  dan `contains(key: &K) -> bool`.
+- `native/src/infrastructure/redis_distributed.rs` — tambah `clear()`, `len()`,
+  `is_empty()`.
+- `native/src/scan_cache.rs` — hapus `#[allow(dead_code)]` dari
+  `priority_score`, `cache_dump`, `cache_load`, dan field `mtime_ms`/`size`
+  di `CacheEntry`.
+
+### 2. Rust — Bug Fixes
+- `native/src/animation.rs` — ganti `WHITESPACE_RE.split()` menjadi
+  `split_whitespace()` di `split_animate_classes`, hapus dependency regex
+  yang tidak terpakai, dan fix `generate_id()` agar tidak panic
+  dengan `.unwrap_or(0)` fallback.
+- `native/src/domain/css_rule.rs` — extract helper
+  `nest_media_queries(inner: String) -> String` untuk menghindari duplikasi
+  loop fold antara `to_css_string()` dan `to_minified_css()`.
+- `native/src/domain/transform.rs` — tambah `has_unparseable_dynamic_expressions()`
+  agar template dengan `${` yang tidak bisa di-resolve kini diskip di
+  STEP 1 AST path, STEP 1 regex fallback, dan STEP 2 `tw(Component)` wrapper.
+- `native/src/watcher_tests.rs` — ganti hardcoded `/tmp` dengan
+  `tempfile::TempDir` agar test tidak gagal di environment dengan
+  permission restriction.
+- `native/src/infrastructure/napi_bridge_css.rs` — hapus duplicate `#[napi]`
+  dan fix type mismatch `&Variant` vs `&str` dengan `v.name()`.
+
+### 3. TypeScript — Wire Unwired Functions
+7 fungsi Rust yang sebelumnya exposed via NAPI tapi belum dipanggil dari
+TypeScript sekarang sudah di-wire:
+
+- `packages/domain/engine/src/native-bridge.ts` — tambah wrapper
+  `clearNameRegistries()`, export via `index.ts`.
+- `packages/domain/compiler/src/nativeBridge.ts` — tambah interface untuk
+  `clearThemeCacheNapi`, `getWatchSystemStatus`, `getWeek8OptimizationStatus`,
+  `inspectCacheStats`.
+- `packages/domain/compiler/src/nativeBridgeWrappers.ts` — tambah wrapper +
+  types:
+  - `clear_parse_cache_napi`
+  - `clear_theme_cache_napi`
+  - `get_watch_system_status` + `WatchSystemStatus`
+  - `get_week8_optimization_status` + `Week8OptimizationStatus`
+  - `inspect_cache_stats` + `CacheInspectionResult`
+- `packages/domain/compiler/src/cache/index.ts` — export
+  `clear_parse_cache_napi`, `clear_theme_cache_napi`.
+- `packages/domain/compiler/src/watch/index.ts` — export `get_watch_system_status`.
+- `packages/domain/compiler/src/analyzer/index.ts` — export
+  `get_week8_optimization_status`, `inspect_cache_stats`.
+- `packages/domain/core/src/native.ts` — tambah wrapper `extractThemeFromCss()`,
+  export via `index.ts`.
+
+### 4. Tests Baru
+- `packages/domain/compiler/tests/nativeBridgeWrappers.test.mjs` — test untuk
+  5 fungsi newly wired.
+- `packages/domain/engine/tests/nativeBridge.test.mjs` — test untuk
+  `clearNameRegistries`.
+- `packages/domain/core/tests/nativeBridge.test.mjs` — test untuk
+  `extractThemeFromCss`.
+
+### 5. Dokumentasi
+- `docs/rust-integration/CACHE_BACKEND_UPGRADE_2026.md`
+- `docs/rust-integration/UNWIRED_RUST_FUNCTIONS_2026.md`
+- `docs/rust-integration/WIRE_UNWIRED_RUST_FUNCTIONS_2026.md`
+
+### 6. Config & Ignore
+- `.npmignore` — tambah `kilo.json` dan `.kilo`.
+- `.gitignore` — tambah `kilo.json`, `.kilo`, `.kilocode`.
+- `.kilocode/mcp.json` — konfigurasi Context7 MCP remote server.
+- `kilo.json` — hapus blok MCP config (dipindah ke `.kilocode/mcp.json`).
+
+### 7. Test Fixes
+- `native/src/domain/transform.rs` — `transform_source_skips_dynamic_templates`
+  kini lulus.
+- `native/src/watcher_tests.rs` — `watcher_starts_on_real_dir` kini lulus.
+- Full suite: `cargo test --lib` — **635 passed, 0 failed**.
+
+### 8. Context7 MCP
+- Remote MCP server `https://mcp.context7.com/mcp` dikonfigurasi di
+  `.kilocode/mcp.json` dengan API key.
+- `kilo.json` tidak dipakai untuk MCP config lagi di project ini.
+- Setelah edit `.kilocode/mcp.json`, restart Kilo/VS Code agar aktif.
